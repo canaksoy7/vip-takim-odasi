@@ -1,0 +1,1182 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VIP SM Takım Odası — Türk Telekom</title>
+<style>
+  :root {
+    --navy: #003087;
+    --navy-light: #e8f0fd;
+    --green: #1a7a4a;
+    --green-light: #e8f7f1;
+    --purple: #7c3aed;
+    --purple-light: #f3e8ff;
+    --amber: #b45309;
+    --amber-light: #fef3c7;
+    --red: #c2410c;
+    --red-light: #fff1ee;
+    --slate: #5a6e8c;
+    --slate-light: #f1f5f9;
+    --mobile: #0077b6;
+    --mobile-light: #e0f4fc;
+    --text: #1e2d45;
+    --text-muted: #64748b;
+    --text-faint: #94a3b8;
+    --border: #e2e8f0;
+    --bg: #f8fafc;
+    --white: #ffffff;
+    --radius: 12px;
+    --radius-sm: 8px;
+    --shadow: 0 1px 3px rgba(0,0,0,.06), 0 4px 16px rgba(0,48,135,.05);
+    --shadow-md: 0 4px 20px rgba(0,48,135,.10);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  /* ── HEADER ── */
+  .site-header {
+    background: var(--navy);
+    color: #fff;
+    padding: 0 24px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 12px rgba(0,0,0,.18);
+  }
+  .header-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    height: 56px;
+  }
+  .header-logo {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    white-space: nowrap;
+    opacity: .9;
+  }
+  .header-logo span { opacity: .5; margin: 0 6px; }
+  .header-search {
+    flex: 1;
+    max-width: 480px;
+    position: relative;
+  }
+  .header-search input {
+    width: 100%;
+    background: rgba(255,255,255,.12);
+    border: 1px solid rgba(255,255,255,.2);
+    border-radius: 8px;
+    padding: 8px 12px 8px 36px;
+    font-size: 13px;
+    color: #fff;
+    outline: none;
+    transition: background .2s, border .2s;
+  }
+  .header-search input::placeholder { color: rgba(255,255,255,.5); }
+  .header-search input:focus { background: rgba(255,255,255,.18); border-color: rgba(255,255,255,.4); }
+  .header-search .search-icon {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    opacity: .5;
+    font-size: 15px;
+    pointer-events: none;
+  }
+  #search-count {
+    font-size: 11px;
+    color: rgba(255,255,255,.6);
+    margin-left: 4px;
+    white-space: nowrap;
+  }
+  .header-meta {
+    font-size: 10px;
+    color: rgba(255,255,255,.4);
+    letter-spacing: .5px;
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  /* ── LAYOUT ── */
+  .page-wrapper {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 24px 16px 60px;
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+
+  /* ── SIDEBAR NAV ── */
+  .sidebar {
+    position: sticky;
+    top: 72px;
+  }
+  .sidebar-section {
+    background: var(--white);
+    border-radius: var(--radius);
+    padding: 14px;
+    box-shadow: var(--shadow);
+    margin-bottom: 12px;
+  }
+  .sidebar-label {
+    font-size: 9px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: var(--text-faint);
+    margin-bottom: 8px;
+  }
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    border-radius: 7px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    transition: background .15s, color .15s;
+    text-decoration: none;
+    border: none;
+    background: transparent;
+    width: 100%;
+    text-align: left;
+  }
+  .nav-item:hover { background: var(--slate-light); color: var(--text); }
+  .nav-item.active { color: var(--navy); background: var(--navy-light); }
+  .nav-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .nav-count {
+    margin-left: auto;
+    font-size: 10px;
+    background: var(--border);
+    border-radius: 10px;
+    padding: 1px 6px;
+    font-weight: 700;
+    color: var(--text-faint);
+  }
+  .nav-count.has-active { background: var(--green-light); color: var(--green); }
+
+  .add-entry-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    padding: 9px;
+    background: var(--navy);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background .15s;
+    text-decoration: none;
+  }
+  .add-entry-btn:hover { background: #001f5c; }
+
+  /* ── MAIN CONTENT ── */
+  .main-content { min-width: 0; }
+
+  /* ── ACTIVE PILLS BAR ── */
+  .active-bar {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--navy);
+    border-radius: var(--radius);
+    padding: 14px 18px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow);
+  }
+  .active-bar-label {
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--navy);
+    margin-bottom: 10px;
+  }
+  .pill-row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    text-decoration: none;
+    border: 1.5px solid currentColor;
+    transition: background .15s, opacity .15s;
+    cursor: pointer;
+    background: var(--white);
+  }
+  .pill:hover { opacity: .8; }
+  .pill.active-pill { background: var(--green-light); border-color: var(--green); color: var(--green); }
+  .pill .pill-status {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+  /* ── CATEGORIES ── */
+  .category-block {
+    background: var(--white);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    margin-bottom: 14px;
+    overflow: hidden;
+    transition: box-shadow .2s;
+  }
+  .category-block:hover { box-shadow: var(--shadow-md); }
+
+  .category-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    cursor: pointer;
+    user-select: none;
+    border-left: 4px solid currentColor;
+    transition: background .15s;
+  }
+  .category-header:hover { background: var(--slate-light); }
+  .category-icon { font-size: 16px; flex-shrink: 0; }
+  .category-title {
+    flex: 1;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: -.1px;
+  }
+  .category-subtitle {
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--text-muted);
+    margin-top: 1px;
+  }
+  .category-badges { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+  .badge {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 10px;
+  }
+  .badge.active { background: var(--green-light); color: var(--green); }
+  .badge.soon { background: var(--slate-light); color: var(--text-faint); }
+  .chevron {
+    font-size: 12px;
+    color: var(--text-faint);
+    transition: transform .25s;
+    flex-shrink: 0;
+  }
+  .category-block.open .chevron { transform: rotate(180deg); }
+
+  .category-body {
+    display: none;
+    border-top: 1px solid var(--border);
+    padding: 0;
+  }
+  .category-block.open .category-body { display: block; }
+
+  /* Entry rows */
+  .entry-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 18px 10px 22px;
+    border-bottom: 1px solid var(--border);
+    transition: background .15s;
+  }
+  .entry-row:last-child { border-bottom: none; }
+  .entry-row:hover { background: var(--bg); }
+  .entry-row.is-soon { opacity: .55; }
+  .entry-link {
+    flex: 1;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--navy);
+    text-decoration: none;
+  }
+  .entry-link:hover { text-decoration: underline; }
+  .entry-link.soon-link { color: var(--text-faint); cursor: default; pointer-events: none; }
+  .entry-owner {
+    font-size: 10px;
+    color: var(--text-faint);
+    white-space: nowrap;
+  }
+  .entry-status {
+    font-size: 9px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 8px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .entry-status.active { background: var(--green-light); color: var(--green); }
+  .entry-status.soon { background: var(--slate-light); color: var(--text-faint); }
+  .entry-status.new { background: #fef9c3; color: #854d0e; }
+
+  /* ── REGISTERS SECTION ── */
+  .section-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 28px 0 16px;
+  }
+  .section-divider::before, .section-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+  .section-divider-label {
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: var(--navy);
+    white-space: nowrap;
+  }
+
+  .register-card {
+    background: var(--white);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    margin-bottom: 16px;
+    overflow: hidden;
+    border-top: 3px solid var(--navy);
+  }
+  .register-header {
+    padding: 16px 20px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .register-title {
+    font-size: 14px;
+    font-weight: 800;
+    color: var(--navy);
+    margin-bottom: 3px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .register-badge {
+    font-size: 9px;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 8px;
+    color: #fff;
+    letter-spacing: .4px;
+  }
+  .register-desc { font-size: 11px; color: var(--text-muted); }
+  .register-actions { display: flex; gap: 8px; flex-shrink: 0; }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 7px 13px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: opacity .15s;
+  }
+  .btn:hover { opacity: .85; }
+  .btn-primary { background: var(--navy); color: #fff; }
+  .btn-outline { background: var(--navy-light); border: 1px solid var(--navy); color: var(--navy); }
+
+  .register-embed {
+    background: var(--bg);
+    border-top: 1px solid var(--border);
+    overflow: hidden;
+    position: relative;
+  }
+  .register-embed iframe {
+    width: 100%;
+    height: 460px;
+    border: none;
+    display: block;
+  }
+  .embed-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    height: 200px;
+    background: var(--slate-light);
+    border: 2px dashed var(--border);
+    border-radius: 8px;
+    margin: 16px;
+    color: var(--text-faint);
+    font-size: 12px;
+    text-align: center;
+  }
+  .embed-placeholder .icon { font-size: 32px; }
+
+  .register-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    background: #fffbeb;
+    border-left: 3px solid #f59e0b;
+    padding: 10px 16px;
+    font-size: 11px;
+    color: #78350f;
+    line-height: 1.5;
+  }
+
+  /* ── QUICK GUIDE ── */
+  .quick-guide {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-top: 20px;
+  }
+  .guide-item {
+    background: var(--white);
+    border-radius: 8px;
+    border-left: 3px solid;
+    padding: 10px 14px;
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.5;
+    box-shadow: var(--shadow);
+  }
+  .guide-item strong { display: block; margin-bottom: 2px; }
+
+  /* ── SEARCH NO RESULTS ── */
+  .no-results {
+    display: none;
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-faint);
+    font-size: 13px;
+  }
+  .no-results .icon { font-size: 36px; margin-bottom: 10px; }
+
+  /* ── FOOTER ── */
+  .site-footer {
+    text-align: center;
+    padding: 24px;
+    font-size: 10px;
+    color: var(--text-faint);
+    letter-spacing: .5px;
+    border-top: 1px solid var(--border);
+    margin-top: 20px;
+  }
+
+  /* ── ADD MODAL ── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.4);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--white);
+    border-radius: 16px;
+    padding: 28px;
+    max-width: 520px;
+    width: 100%;
+    box-shadow: 0 20px 60px rgba(0,0,0,.2);
+  }
+  .modal-title { font-size: 16px; font-weight: 800; color: var(--navy); margin-bottom: 20px; }
+  .form-row { margin-bottom: 14px; }
+  .form-row label { display: block; font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 5px; text-transform: uppercase; letter-spacing: .6px; }
+  .form-row input, .form-row select, .form-row textarea {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 9px 12px;
+    font-size: 13px;
+    color: var(--text);
+    outline: none;
+    font-family: inherit;
+    transition: border-color .15s;
+  }
+  .form-row input:focus, .form-row select:focus, .form-row textarea:focus { border-color: var(--navy); }
+  .form-row textarea { resize: vertical; min-height: 72px; }
+  .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
+  .btn-cancel { background: var(--slate-light); color: var(--text-muted); }
+  .btn-save { background: var(--navy); color: #fff; }
+
+  /* ── HIGHLIGHT ── */
+  .search-match { background: #fde68a; border-radius: 2px; padding: 0 1px; }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 768px) {
+    .page-wrapper { grid-template-columns: 1fr; }
+    .sidebar { position: static; }
+    .quick-guide { grid-template-columns: 1fr; }
+    .header-meta { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── SITE HEADER ── -->
+<header class="site-header">
+  <div class="header-inner">
+    <div class="header-logo">Türk Telekom <span>|</span> VIP SM <span>|</span> Takım Odası</div>
+    <div class="header-search">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="global-search" placeholder="Konu, madde veya sorumlu ara…" autocomplete="off">
+    </div>
+    <span id="search-count"></span>
+    <div class="header-meta">v2.0 · HAZİRAN 2026</div>
+  </div>
+</header>
+
+<!-- ── PAGE ── -->
+<div class="page-wrapper">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Kategoriler</div>
+      <button class="nav-item active" onclick="filterCategory('all')">
+        <span class="nav-dot" style="background:#003087"></span> Tümü
+        <span class="nav-count has-active" id="cnt-all">8</span>
+      </button>
+      <button class="nav-item" onclick="filterCategory('mobil')">
+        <span class="nav-dot" style="background:#0077b6"></span> Mobil
+        <span class="nav-count has-active" id="cnt-mobil">1</span>
+      </button>
+      <button class="nav-item" onclick="filterCategory('internet')">
+        <span class="nav-dot" style="background:#1a7a4a"></span> İnternet
+        <span class="nav-count has-active" id="cnt-internet">1</span>
+      </button>
+      <button class="nav-item" onclick="filterCategory('sosyal')">
+        <span class="nav-dot" style="background:#7c3aed"></span> Sosyal Medya
+        <span class="nav-count has-active" id="cnt-sosyal">2</span>
+      </button>
+      <button class="nav-item" onclick="filterCategory('uyum')">
+        <span class="nav-dot" style="background:#b45309"></span> Uyum / Hukuk
+        <span class="nav-count has-active" id="cnt-uyum">2</span>
+      </button>
+      <button class="nav-item" onclick="filterCategory('vip')">
+        <span class="nav-dot" style="background:#c2410c"></span> VIP Operasyonlar
+        <span class="nav-count" id="cnt-vip">0</span>
+      </button>
+      <button class="nav-item" onclick="filterCategory('kontakt')">
+        <span class="nav-dot" style="background:#003087"></span> Kontakt Rehberi
+        <span class="nav-count has-active" id="cnt-kontakt">1</span>
+      </button>
+      <button class="nav-item" onclick="filterCategory('monitoring')">
+        <span class="nav-dot" style="background:#5a6e8c"></span> Monitoring / Genel
+        <span class="nav-count has-active" id="cnt-monitoring">3</span>
+      </button>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Hızlı İşlem</div>
+      <button class="add-entry-btn" onclick="openModal()">
+        ➕ Yeni Madde Ekle
+      </button>
+      <div style="margin-top:8px;font-size:10px;color:var(--text-faint);text-align:center;line-height:1.5;">
+        JSON dosyasına kaydedilir, kolayca wiki'ye aktarılır
+      </div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Durum Açıklaması</div>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <div style="display:flex;align-items:center;gap:7px;font-size:11px;">
+          <span style="background:var(--green-light);color:var(--green);padding:2px 8px;border-radius:8px;font-size:9px;font-weight:700;">AKTİF</span>
+          Kullanıma açık
+        </div>
+        <div style="display:flex;align-items:center;gap:7px;font-size:11px;">
+          <span style="background:var(--slate-light);color:var(--text-faint);padding:2px 8px;border-radius:8px;font-size:9px;font-weight:700;">YAKINDA</span>
+          Hazırlık aşaması
+        </div>
+        <div style="display:flex;align-items:center;gap:7px;font-size:11px;">
+          <span style="background:#fef9c3;color:#854d0e;padding:2px 8px;border-radius:8px;font-size:9px;font-weight:700;">YENİ</span>
+          Son eklenenler
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main-content" id="main-content">
+
+    <!-- ACTIVE PILLS -->
+    <div class="active-bar" id="active-bar">
+      <div class="active-bar-label">⚡ Aktif Konular (8)</div>
+      <div class="pill-row" id="active-pills">
+        <!-- filled by JS -->
+      </div>
+    </div>
+
+    <!-- NO RESULTS -->
+    <div class="no-results" id="no-results">
+      <div class="icon">🔍</div>
+      <div>"<span id="no-results-term"></span>" için sonuç bulunamadı</div>
+    </div>
+
+    <!-- CATEGORIES -->
+    <div id="categories-container">
+      <!-- filled by JS -->
+    </div>
+
+    <!-- REGISTERS SECTION -->
+    <div class="section-divider" id="registers-section">
+      <div class="section-divider-label">📊 Aktif Kayıt Defterleri</div>
+    </div>
+
+    <!-- Register cards -->
+    <div id="registers-container">
+      <!-- filled by JS -->
+    </div>
+
+    <!-- QUICK GUIDE -->
+    <div class="quick-guide">
+      <div class="guide-item" style="border-color:var(--navy)">
+        <strong style="color:var(--navy)">🔍 Konu Ara</strong>
+        Üstteki arama kutusuna yaz — anlık filtreler
+      </div>
+      <div class="guide-item" style="border-color:var(--green)">
+        <strong style="color:var(--green)">📂 Gözat</strong>
+        Sol menüden kategoriye tıkla veya akordeonları aç
+      </div>
+      <div class="guide-item" style="border-color:var(--purple)">
+        <strong style="color:var(--purple)">✏️ Eksik Bilgi</strong>
+        "Yeni Madde Ekle" ile talep oluştur
+      </div>
+      <div class="guide-item" style="border-color:var(--amber)">
+        <strong style="color:var(--amber)">📁 Dosya</strong>
+        Kayıt defterleri bölümünden Excel'e eriş
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- FOOTER -->
+<footer class="site-footer">
+  ◆ TÜRK TELEKOM · VIP &amp; SOSYAL MEDYA ŞİKAYET YÖNETİMİ EKİBİ · HAZİRAN 2026
+</footer>
+
+<!-- ADD MODAL -->
+<div class="modal-overlay" id="modal-overlay" onclick="handleOverlayClick(event)">
+  <div class="modal">
+    <div class="modal-title">➕ Yeni Madde Ekle</div>
+    <div class="form-row">
+      <label>Başlık *</label>
+      <input type="text" id="f-title" placeholder="örn: IREG Eskalasyon Akışı">
+    </div>
+    <div class="form-row">
+      <label>Kategori *</label>
+      <select id="f-cat">
+        <option value="">Seç…</option>
+        <option value="mobil">📱 Mobil</option>
+        <option value="internet">🌐 İnternet</option>
+        <option value="sosyal">💬 Sosyal Medya</option>
+        <option value="uyum">⚖️ Uyum / Hukuk</option>
+        <option value="vip">🌟 VIP Operasyonlar</option>
+        <option value="kontakt">📞 Kontakt Rehberi</option>
+        <option value="monitoring">⚙️ Monitoring / Genel</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label>Sorumlu / Ekip</label>
+      <input type="text" id="f-owner" placeholder="örn: VIP Mobil Ekip">
+    </div>
+    <div class="form-row">
+      <label>Durum</label>
+      <select id="f-status">
+        <option value="soon">YAKINDA</option>
+        <option value="active">AKTİF</option>
+        <option value="new">YENİ</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label>URL (opsiyonel)</label>
+      <input type="text" id="f-url" placeholder="SharePoint wiki URL">
+    </div>
+    <div class="form-row">
+      <label>Not</label>
+      <textarea id="f-note" placeholder="Kısa açıklama…"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-cancel" onclick="closeModal()">İptal</button>
+      <button class="btn btn-save" onclick="saveEntry()">💾 Kaydet (JSON)</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ──────────────────────────────────────────────
+// DATA MODEL
+// ──────────────────────────────────────────────
+const DATA = {
+  categories: [
+    {
+      id: 'mobil',
+      color: '#0077b6',
+      icon: '📱',
+      title: 'MOBİL',
+      subtitle: 'Roaming, FÜS, Yurtdışı, Numara Lock, Fraud, IREG',
+      entries: [
+        { title: 'FÜS & Tarifen Yurtdışında — Roaming, 250 TL Fatura Sınırı', status: 'active', url: '/gruplar/vip-sm-takim-odasi/Wiki/Wiki%20Sayfalari/Yurtd%C4%B1%C5%9F%C4%B1%20Servisleri.aspx', owner: 'VIP Mobil Ekip' },
+        { title: 'Dolaşım — Şebekeye Bağlanamama / Geç Bağlanma', status: 'soon', owner: 'VIP Mobil Ekip' },
+        { title: 'Yurtdışında Numara Lock', status: 'soon', owner: 'VIP Mobil Ekip' },
+        { title: 'IREG Eskalasyon Akışı', status: 'soon', owner: 'VIP Mobil Ekip' },
+        { title: 'Mobil FU Tanımı', status: 'soon', owner: 'VIP Mobil Ekip' },
+        { title: 'Fraud — Tespit, Süreç ve Raporlama', status: 'soon', owner: 'VIP Mobil Ekip' },
+        { title: 'KVKK — Mobil Veri İşleme', status: 'soon', owner: 'KVKK Core' },
+      ]
+    },
+    {
+      id: 'internet',
+      color: '#1a7a4a',
+      icon: '🌐',
+      title: 'İNTERNET',
+      subtitle: 'Hız, Download-Upload, 1000 MBPS, 1 Gbps, RSMC, SEM, BTK',
+      entries: [
+        { title: 'Download-Upload 1000/1000 MBPS Hız Artırımı', status: 'active', url: '/gruplar/vip-sm-takim-odasi/Wiki/Wiki%20Sayfalari/Download-Upload%201000%20MBPS%20Nas%C4%B1l%20Yap%C4%B1l%C4%B1r1.aspx', owner: 'RSMC İstanbul DSL + SEM Ankara' },
+        { title: '1 Gbps Upload Hız Yükseltme', status: 'soon', owner: 'RSMC' },
+        { title: 'Erişim Cihazı & Web Sorunları', status: 'soon', owner: 'Teknik Ekip' },
+        { title: 'Altyapı Talebi Açma Süreci', status: 'soon', owner: 'Teknik Ekip' },
+        { title: 'BTK Bildirim Süreci', status: 'soon', owner: 'BTK Uyum' },
+      ]
+    },
+    {
+      id: 'sosyal',
+      color: '#7c3aed',
+      icon: '💬',
+      title: 'SOSYAL MEDYA',
+      subtitle: 'LinkedIn, Instagram, Marcom, Marka İletişim, Tivibu',
+      entries: [
+        { title: 'LinkedIn Hesap Yönetimi', status: 'active', url: '/gruplar/vip-sm-takim-odasi/Wiki/Wiki%20Sayfalari/Linkedin%20Hesap%20Y%C3%B6netimi.aspx', owner: 'Eser Değirmencioğlu (İç İletişim)' },
+        { title: 'Marcom Ekipleri (Instagram & Marka İletişim)', status: 'active', url: '/gruplar/vip-sm-takim-odasi/Wiki/Wiki%20Sayfalari/Marcom%20Ekipleri.aspx', owner: 'Bengü Çam, Simge Çakıcı (VAS&SM)' },
+        { title: 'Tivibu Provizyon Kodu', status: 'soon', owner: 'Tivibu Ekip' },
+        { title: 'Tivibu Teknik İnceleme', status: 'soon', owner: 'Tivibu Ekip' },
+        { title: 'Tivibu Müşteri Şikayet Akışı', status: 'soon', owner: 'Tivibu Ekip' },
+        { title: 'Sosyal Medya Şikayet Akışı', status: 'soon', owner: 'VIP SM Ekip' },
+      ]
+    },
+    {
+      id: 'uyum',
+      color: '#b45309',
+      icon: '⚖️',
+      title: 'UYUM / HUKUK',
+      subtitle: 'KVKK, Hukuk İşleri, Pazarlama MH Hukuk Müdürlüğü',
+      entries: [
+        { title: 'KVKK Core Ekibi — Görüş & Bilgi Talepleri', status: 'active', url: '/gruplar/vip-sm-takim-odasi/Wiki/Wiki%20Sayfalari/KVKK.aspx', owner: 'KVKK Core, Göksun Işıl Batmaz' },
+        { title: 'Hukuk İşleri', status: 'active', url: '/gruplar/vip-sm-takim-odasi/Wiki/Wiki%20Sayfalari/Hukuk%20%C4%B0%C5%9Fleri.aspx', owner: 'Pazarlama & MH Hukuk Müdürlüğü' },
+      ]
+    },
+    {
+      id: 'vip',
+      color: '#c2410c',
+      icon: '🌟',
+      title: 'VIP OPERASYONLAR',
+      subtitle: 'Tanım, Bakan Protokol, Taahhüt, İndirim Onay',
+      entries: [
+        { title: 'VIP Tanım ve Kapsam', status: 'soon', owner: 'VIP SM Ekip' },
+        { title: 'Bakan / Milletvekili Protokol', status: 'soon', owner: 'VIP SM Ekip' },
+        { title: 'Taahhüt Yönetimi Süreci', status: 'soon', owner: 'VIP SM Ekip' },
+        { title: 'İndirim Yetkisi ve Onay Süreci', status: 'soon', owner: 'VIP SM Ekip' },
+      ]
+    },
+    {
+      id: 'kontakt',
+      color: '#003087',
+      icon: '📞',
+      title: 'KONTAKT REHBERİ',
+      subtitle: 'İç Ekip, RSMC, SEM, IT, Hukuk, Dış Paydaş',
+      entries: [
+        { title: 'Hukuk Ekibi — Pazarlama & MH Hukuk Müdürlüğü', status: 'active', url: '/gruplar/vip-sm-takim-odasi/Wiki/Wiki%20Sayfalari/Hukuk%20%C4%B0%C5%9Fleri.aspx', owner: 'Pazarlama & MH Hukuk Müdürlüğü' },
+        { title: 'İç Ekip — VIP SM', status: 'soon', owner: 'VIP SM Ekip' },
+        { title: 'RSMC & SEM Kontaktlar', status: 'soon', owner: 'Teknik Ekip' },
+        { title: 'IT & Teknik Ekip', status: 'soon', owner: 'IT' },
+        { title: 'Dış Paydaş Rehberi', status: 'soon', owner: 'VIP SM Ekip' },
+      ]
+    },
+    {
+      id: 'monitoring',
+      color: '#5a6e8c',
+      icon: '⚙️',
+      title: 'MONİTORİNG / GENEL',
+      subtitle: 'Ajans, Uçak WiFi, Bağış, BL, IVR, OCS',
+      entries: [
+        { title: 'Ajans Talepleri — Monitoring (Adba)', status: 'active', url: '/gruplar/vip-sm-takim-odasi/Wiki/Wiki%20Sayfalari/Ajans%20Talepleri%20-%20Monitoring.aspx', owner: 'Adba Analytics' },
+        { title: 'KVKK Core Ekibi', status: 'active', url: '/gruplar/vip-sm-takim-odasi/Wiki/Wiki%20Sayfalari/KVKK.aspx', owner: 'KVKK Core' },
+        { title: 'Uçak WiFi Kod Talepleri', status: 'active', url: '/gruplar/vip-sm-takim-odasi/Wiki/Wiki%20Sayfalari/U%C3%A7ak%20WI-FI%20Kodlar%C4%B1.aspx', owner: 'Gizem Tokatlı' },
+        { title: 'Bağış Servisi', status: 'soon', owner: 'İlgili Ekip' },
+        { title: 'BL\'den Çıkarma Süreci', status: 'soon', owner: 'İlgili Ekip' },
+        { title: 'IVR İnceleme', status: 'soon', owner: 'İlgili Ekip' },
+        { title: '444\'lü Hat Numara Havuzu', status: 'soon', owner: 'İlgili Ekip' },
+        { title: 'Fatura, OCS & Kilitli Fatura', status: 'soon', owner: 'İlgili Ekip' },
+      ]
+    }
+  ],
+  registers: [
+    {
+      title: 'VVIP Altyapı · Dönüşüm Listesi',
+      icon: '🏗️',
+      color: '#003087',
+      badge: 'EXCEL',
+      desc: 'Canlı Excel · Ekip doğrudan düzenleyebilir · Otomatik kaydedilir',
+      openUrl: '/gruplar/vip-sm-takim-odasi/MyDocuments2/VVIP%20Altyap%C4%B1-%20D%C3%B6n%C3%BC%C5%9F%C3%BCm%20Listesi.xlsx?d=w743914dbc6ec4411912e46b101036023',
+      folderUrl: '/gruplar/vip-sm-takim-odasi/MyDocuments2/Forms/AllItems.aspx',
+      embedSrc: '/gruplar/vip-sm-takim-odasi/_layouts/15/Doc.aspx?sourcedoc=%7b743914db-c6ec-4411-912e-46b101036023%7d&action=embedview&wdAllowInteractivity=True&wdHideGridlines=False&wdHideHeaders=False&wdDownloadButton=True&wdInConfigurator=True',
+      note: null
+    },
+    {
+      title: 'VVIP Taahhüt Yenileme',
+      icon: '🔄',
+      color: '#dc2626',
+      badge: 'ÖZET GÖRÜNÜM',
+      desc: 'Taahhüt Bitiş Tarihi · Müşteri Ad Soyad · Unvan · Konu · Talep Sahibi',
+      openUrl: '/gruplar/vip-sm-takim-odasi/MyDocuments2/VVIP%20Taahh%C3%BCt%20Yenileme.xlsx?d=w3e5978dc3b5b42a9ad2c8a94cf7a0d29',
+      folderUrl: '/gruplar/vip-sm-takim-odasi/MyDocuments2/Forms/AllItems.aspx',
+      embedSrc: '/gruplar/vip-sm-takim-odasi/_layouts/15/Doc.aspx?sourcedoc=%7b3e5978dc-3b5b-42a9-ad2c-8a94cf7a0d29%7d&action=embedview&wdAllowInteractivity=True&wdHideGridlines=False&wdHideHeaders=False&wdDownloadButton=True&wdHideSheetTabs=True',
+      note: 'Bu, Excel\'in özet görünümüdür. Tam veriye ulaşmak için "Tam Excel\'i Aç" butonuna tıkla.'
+    },
+    {
+      title: 'GMY Hizmet Numaraları',
+      icon: '📇',
+      color: '#7c3aed',
+      badge: 'EXCEL',
+      desc: 'Canlı Excel · Ekip doğrudan düzenleyebilir · Otomatik kaydedilir',
+      openUrl: '/gruplar/vip-sm-takim-odasi/MyDocuments2/GMY%20Hizmet%20Numaralar%C4%B1/Kopya%20gmy%20(002).xlsx?d=wa6a2f05f7b3b44898f5cd6e21e27bd3d',
+      folderUrl: '/gruplar/vip-sm-takim-odasi/MyDocuments2/GMY%20Hizmet%20Numaralar%C4%B1/Forms/AllItems.aspx',
+      embedSrc: '/gruplar/vip-sm-takim-odasi/_layouts/15/Doc.aspx?sourcedoc=%7ba6a2f05f-7b3b-4489-8f5c-d6e21e27bd3d%7d&action=embedview&wdAllowInteractivity=True&wdHideGridlines=False&wdHideHeaders=False&wdDownloadButton=True&wdInConfigurator=True',
+      note: null
+    },
+    {
+      title: 'YK Hizmet Numaraları',
+      icon: '🏛️',
+      color: '#003087',
+      badge: 'EXCEL',
+      desc: 'Canlı Excel · Ekip doğrudan düzenleyebilir · Otomatik kaydedilir',
+      openUrl: '/gruplar/vip-sm-takim-odasi/MyDocuments2/YK%20Hizmet%20Numaralar%C4%B1/Y%C3%B6netim%20Kurulu%20(002).xlsx?d=w1f5bd21bca8e4826a9f5bb7c57e5822f',
+      folderUrl: '/gruplar/vip-sm-takim-odasi/MyDocuments2/YK%20Hizmet%20Numaralar%C4%B1/Forms/AllItems.aspx',
+      embedSrc: '/gruplar/vip-sm-takim-odasi/_layouts/15/Doc.aspx?sourcedoc=%7b1f5bd21b-ca8e-4826-a9f5-bb7c57e5822f%7d&action=embedview&wdAllowInteractivity=True&wdHideGridlines=False&wdHideHeaders=False&wdDownloadButton=True&wdInConfigurator=True',
+      note: null
+    },
+    {
+      title: 'VVIP Taahhüt Yenileme — Dashboard',
+      icon: '📊',
+      color: '#c2410c',
+      badge: 'CANLI PANEL',
+      desc: 'Toplam Kayıt · Talep Sahibi · Kanal · Unvan · Aracı · Taahhüt Bitiş Takibi',
+      openUrl: '/gruplar/vip-sm-takim-odasi/MyDocuments2/VVIP_Taahhut_Dashboard_v4.xlsx?d=wf7cbb5fc517a4ff3bbf483350ff0361b',
+      folderUrl: '/gruplar/vip-sm-takim-odasi/MyDocuments2/Forms/AllItems.aspx',
+      embedSrc: '/gruplar/vip-sm-takim-odasi/_layouts/15/Doc.aspx?sourcedoc=%7bf7cbb5fc-517a-4ff3-bbf4-83350ff0361b%7d&action=embedview&wdAllowInteractivity=True&wdHideGridlines=False&wdHideHeaders=False&wdDownloadButton=True&wdHideSheetTabs=False',
+      note: 'Bu panel Dashboard sekmesini gösterir. Veri sekmesine geçmek için "Tam Excel\'i Aç" butonuna tıkla.'
+    }
+  ]
+};
+
+// ──────────────────────────────────────────────
+// RENDER
+// ──────────────────────────────────────────────
+function statusLabel(s) {
+  if (s === 'active') return '<span class="entry-status active">AKTİF</span>';
+  if (s === 'new')    return '<span class="entry-status new">YENİ</span>';
+  return '<span class="entry-status soon">YAKINDA</span>';
+}
+
+function renderAll() {
+  // Active pills
+  const pills = document.getElementById('active-pills');
+  const activeEntries = DATA.categories.flatMap(c =>
+    c.entries.filter(e => e.status === 'active' || e.status === 'new').map(e => ({...e, catColor: c.color}))
+  );
+  pills.innerHTML = activeEntries.map(e => `
+    <a class="pill active-pill" href="${e.url || '#'}" style="border-color:${e.catColor};color:${e.catColor};background:${e.catColor}15">
+      <span class="pill-status" style="background:${e.catColor}"></span>
+      ${e.title}
+    </a>
+  `).join('');
+  document.querySelector('.active-bar-label').textContent = `⚡ Aktif Konular (${activeEntries.length})`;
+
+  // Categories
+  const container = document.getElementById('categories-container');
+  container.innerHTML = DATA.categories.map(cat => {
+    const activeCount = cat.entries.filter(e => e.status === 'active' || e.status === 'new').length;
+    const soonCount   = cat.entries.filter(e => e.status === 'soon').length;
+    return `
+    <div class="category-block" data-cat="${cat.id}" id="cat-${cat.id}">
+      <div class="category-header" style="color:${cat.color}" onclick="toggleCat('${cat.id}')">
+        <span class="category-icon">${cat.icon}</span>
+        <div>
+          <div class="category-title" style="color:${cat.color}">${cat.title}</div>
+          <div class="category-subtitle">${cat.subtitle}</div>
+        </div>
+        <div class="category-badges">
+          ${activeCount ? `<span class="badge active">${activeCount} aktif</span>` : ''}
+          ${soonCount   ? `<span class="badge soon">${soonCount} yakında</span>` : ''}
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="category-body">
+        ${cat.entries.map(e => `
+          <div class="entry-row ${e.status === 'soon' ? 'is-soon' : ''}" data-searchable>
+            ${e.url && e.status !== 'soon'
+              ? `<a class="entry-link" href="${e.url}">${e.title}</a>`
+              : `<span class="entry-link soon-link">${e.title}</span>`}
+            <span class="entry-owner">${e.owner || ''}</span>
+            ${statusLabel(e.status)}
+          </div>
+        `).join('')}
+      </div>
+    </div>`;
+  }).join('');
+
+  // Registers
+  const regContainer = document.getElementById('registers-container');
+  regContainer.innerHTML = DATA.registers.map(r => `
+    <div class="register-card" style="border-top-color:${r.color}">
+      <div class="register-header">
+        <div>
+          <div class="register-title">
+            ${r.icon} ${r.title}
+            <span class="register-badge" style="background:${r.color}">${r.badge}</span>
+          </div>
+          <div class="register-desc">${r.desc}</div>
+        </div>
+        <div class="register-actions">
+          <a class="btn btn-primary" href="${r.openUrl}" target="_blank" style="background:${r.color}">📂 Aç</a>
+          <a class="btn btn-outline" href="${r.folderUrl}" target="_blank" style="border-color:${r.color};color:${r.color};background:${r.color}15">📁 Klasör</a>
+        </div>
+      </div>
+      <div class="register-embed">
+        <div class="embed-placeholder">
+          <div class="icon">📊</div>
+          <div><strong>${r.title}</strong></div>
+          <div style="font-size:11px;margin-top:4px">SharePoint içinde görüntülemek için "Aç" butonunu kullan</div>
+          <a class="btn" href="${r.openUrl}" target="_blank" style="margin-top:8px;background:${r.color};color:#fff">📂 Excel'de Aç</a>
+        </div>
+      </div>
+      ${r.note ? `<div class="register-note">ℹ️ <div><strong>Not:</strong> ${r.note}</div></div>` : ''}
+    </div>
+  `).join('');
+}
+
+// ──────────────────────────────────────────────
+// ACCORDION
+// ──────────────────────────────────────────────
+function toggleCat(id) {
+  const block = document.getElementById('cat-' + id);
+  block.classList.toggle('open');
+}
+function openAllCats() {
+  document.querySelectorAll('.category-block').forEach(b => b.classList.add('open'));
+}
+
+// ──────────────────────────────────────────────
+// CATEGORY FILTER (sidebar)
+// ──────────────────────────────────────────────
+let activeFilter = 'all';
+function filterCategory(catId) {
+  activeFilter = catId;
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+
+  document.querySelectorAll('.category-block').forEach(block => {
+    if (catId === 'all' || block.dataset.cat === catId) {
+      block.style.display = '';
+    } else {
+      block.style.display = 'none';
+    }
+  });
+  // Clear search on filter change
+  document.getElementById('global-search').value = '';
+  clearSearch();
+}
+
+// ──────────────────────────────────────────────
+// SEARCH
+// ──────────────────────────────────────────────
+function clearSearch() {
+  document.querySelectorAll('[data-searchable]').forEach(row => {
+    row.style.display = '';
+    // remove highlights
+    row.querySelectorAll('.entry-link, .entry-owner').forEach(el => {
+      el.innerHTML = el.textContent;
+    });
+  });
+  document.getElementById('no-results').style.display = 'none';
+  document.getElementById('search-count').textContent = '';
+  // restore category visibility based on filter
+  document.querySelectorAll('.category-block').forEach(block => {
+    block.style.display = (activeFilter === 'all' || block.dataset.cat === activeFilter) ? '' : 'none';
+  });
+}
+
+function doSearch(term) {
+  if (!term) { clearSearch(); return; }
+  const t = term.toLowerCase();
+  let visibleTotal = 0;
+
+  document.querySelectorAll('.category-block').forEach(block => {
+    if (activeFilter !== 'all' && block.dataset.cat !== activeFilter) {
+      block.style.display = 'none';
+      return;
+    }
+    let catVisible = 0;
+    block.querySelectorAll('[data-searchable]').forEach(row => {
+      const linkEl  = row.querySelector('.entry-link');
+      const ownerEl = row.querySelector('.entry-owner');
+      const titleTxt = linkEl ? linkEl.textContent : '';
+      const ownerTxt = ownerEl ? ownerEl.textContent : '';
+      const combined = (titleTxt + ' ' + ownerTxt).toLowerCase();
+
+      if (combined.includes(t)) {
+        row.style.display = '';
+        catVisible++;
+        // highlight
+        if (linkEl)  linkEl.innerHTML  = highlight(titleTxt, term);
+        if (ownerEl) ownerEl.innerHTML = highlight(ownerTxt, term);
+      } else {
+        row.style.display = 'none';
+        if (linkEl)  linkEl.innerHTML  = titleTxt;
+        if (ownerEl) ownerEl.innerHTML = ownerTxt;
+      }
+    });
+    block.style.display = catVisible > 0 ? '' : 'none';
+    if (catVisible > 0) block.classList.add('open');
+    visibleTotal += catVisible;
+  });
+
+  const noRes = document.getElementById('no-results');
+  if (visibleTotal === 0) {
+    noRes.style.display = 'block';
+    document.getElementById('no-results-term').textContent = term;
+  } else {
+    noRes.style.display = 'none';
+  }
+  document.getElementById('search-count').textContent = visibleTotal ? `${visibleTotal} sonuç` : '';
+}
+
+function highlight(text, term) {
+  if (!term) return text;
+  const re = new RegExp(`(${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+  return text.replace(re, '<mark class="search-match">$1</mark>');
+}
+
+document.getElementById('global-search').addEventListener('input', function() {
+  doSearch(this.value.trim());
+});
+
+// ──────────────────────────────────────────────
+// ADD MODAL
+// ──────────────────────────────────────────────
+const pendingEntries = [];
+
+function openModal() {
+  document.getElementById('modal-overlay').classList.add('open');
+}
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+  ['f-title','f-owner','f-url','f-note'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('f-cat').value = '';
+  document.getElementById('f-status').value = 'soon';
+}
+function handleOverlayClick(e) {
+  if (e.target === document.getElementById('modal-overlay')) closeModal();
+}
+function saveEntry() {
+  const title  = document.getElementById('f-title').value.trim();
+  const catId  = document.getElementById('f-cat').value;
+  const owner  = document.getElementById('f-owner').value.trim();
+  const status = document.getElementById('f-status').value;
+  const url    = document.getElementById('f-url').value.trim();
+  const note   = document.getElementById('f-note').value.trim();
+
+  if (!title || !catId) {
+    alert('Başlık ve Kategori zorunludur.');
+    return;
+  }
+
+  const entry = { title, status, owner, url: url || null, note: note || null };
+  const cat = DATA.categories.find(c => c.id === catId);
+  if (cat) {
+    // push 'new' entries to front
+    if (status === 'new' || status === 'active') {
+      cat.entries.unshift({...entry, status: status === 'active' ? 'new' : status});
+    } else {
+      cat.entries.push(entry);
+    }
+  }
+  pendingEntries.push({ category: catId, ...entry });
+
+  renderAll();
+  closeModal();
+
+  // Show export hint
+  showExportHint(pendingEntries);
+}
+
+function showExportHint(entries) {
+  const existing = document.getElementById('export-hint');
+  if (existing) existing.remove();
+
+  const hint = document.createElement('div');
+  hint.id = 'export-hint';
+  hint.style.cssText = `position:fixed;bottom:20px;right:20px;background:#1e2d45;color:#fff;padding:14px 18px;border-radius:10px;font-size:12px;z-index:300;box-shadow:0 8px 32px rgba(0,0,0,.25);max-width:320px;line-height:1.5`;
+  hint.innerHTML = `
+    <strong>✅ ${entries.length} yeni madde eklendi</strong><br>
+    <span style="color:rgba(255,255,255,.7);font-size:11px">JSON olarak indirip wiki.js'ye yapıştır veya ekibe ilet.</span><br>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button onclick="downloadJSON()" style="background:#003087;border:none;color:#fff;padding:6px 12px;border-radius:6px;font-size:11px;cursor:pointer;font-weight:700">⬇ JSON İndir</button>
+      <button onclick="document.getElementById('export-hint').remove()" style="background:rgba(255,255,255,.15);border:none;color:#fff;padding:6px 12px;border-radius:6px;font-size:11px;cursor:pointer">Kapat</button>
+    </div>`;
+  document.body.appendChild(hint);
+}
+
+function downloadJSON() {
+  const blob = new Blob([JSON.stringify(pendingEntries, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `yeni-maddeler-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+}
+
+// ──────────────────────────────────────────────
+// INIT
+// ──────────────────────────────────────────────
+renderAll();
+// Open first category by default
+document.querySelectorAll('.category-block')[0]?.classList.add('open');
+</script>
+</body>
+</html>
