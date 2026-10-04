@@ -64,6 +64,598 @@
        para K/M ("87,2 K TL"), mesafe 999'a kadar "mt.", üstü "km.", hız "Mbps".
      ════════════════════════════════════════════════════════════════════ -->
 
+
+<!-- ═══ ATAMA BİLDİRİMİ (altyapi_atama_bildirimi.html ile birebir aynı blok — değiştirirseniz ikisini de güncelleyin) ═══ -->
+<!--
+  VVIP ALTYAPI · ATAMA BİLDİRİMİ  v1.0 (04.10.2026)
+  ------------------------------------------------------------------
+  Betik Düzenleyicisi (Script Editor) web bölümüne olduğu gibi yapıştırın:
+    • VVIP Altyapı Takip sayfasına (gün boyu açık duran ekran — asıl çalıştığı yer)
+    • Talep Metni Oluşturucu'ya gerek yok: bu blok onun içinde zaten var (aynı kod, bir kez çalışır).
+
+  Ne yapar?
+   1) ATAMA: "VVIP Altyapi Takip" listesine Beklemede durumunda yeni bir kayıt girilip Takipçi atanınca
+      takipçiye mail atar: "Size şu talepler atandı · şu bilgiler eksik, tamamlanması gerekiyor".
+      Aynı kişiye aynı anda giren kayıtlar (ör. Toptan'dan gelen 8 talep) TEK mailde, tablo olarak gider.
+      Takipçi sonradan değiştirilirse yeni takipçiye de gider.
+   2) HATIRLATMA (isteğe bağlı): Atamadan HATIRLATMA_GUN gün sonra kayıt hâlâ Beklemede ve bilgisi
+      hâlâ eksikse takipçiye BİR KEZ hatırlatma gider (0 = kapalı).
+   Eksik bilgi kuralları Altyapı ekranının "künye eksik" kuralıyla aynıdır (Proje Türü, Proje ID, HP,
+   Toplam Maliyet, Fiber Mesafesi, Adres; BF ise Çalışan DSL ve Mevcut Hız) + talep yazısı (Aşama)
+   + harita görseli (VVIPAltyapiEkler kütüphanesindeki P<ProjeID> klasörü).
+
+  Nasıl çalışır?
+   Sunucu tarafı yoktur; ekrandaki VIP Hafıza / Taahhüt alarmlarıyla aynı yöntem: sayfayı açık tutan
+   HERHANGİ bir ekip üyesinin tarayıcısı 5 dakikada bir listeye bakar. Her bildirim VVIPAtamaBildirimLog
+   listesine yazılır; aynı mail iki kez gitmez, aynı anda birden çok kişi sayfadaysa kilit tek gönderim sağlar.
+   Gönderen SharePoint'in kendi mail servisidir (SP.Utilities.Utility.SendEmail).
+   Kurulumdan ÖNCE açılmış kayıtlar için mail gitmez.
+
+  Altyapı ekranıyla bağlantı:
+   Maildeki "Altyapı Takip'te aç" düğmesi sayfayı ?kayit=<Id> ile açar; bu blok Altyapı sayfasında
+   o kaydın formunu kendiliğinden açar. Altyapı sayfasının adresi ilk çalıştığında log'a kaydedilir
+   (ALTYAPI_SAYFA boşsa bile maillerdeki bağlantı doğru sayfaya gider).
+
+  İlk kurulum (bir kez, yönetici hesabıyla):
+   Sol alttaki soluk lacivert noktaya tıklayın → "Kur / Onar" → "Önizle" ile kime ne gideceğine bakın.
+  Konsol (F12): VHAtama.kontrol() · VHAtama.onizle() · VHAtama.durum()
+  ES5 · harici bağımlılık yok
+  ------------------------------------------------------------------
+-->
+<style>
+#vab-dot{position:fixed;left:40px;bottom:10px;width:7px;height:7px;border-radius:50%;background:#1F55C9;opacity:.3;z-index:99990;cursor:pointer;display:none;transition:opacity .15s,transform .15s}
+#vab-dot:hover{opacity:1;transform:scale(1.6)}
+#vab-dot.on{display:block}
+#vab-dot.err{background:#C2352C;opacity:.6}
+#vab-pnl{position:fixed;left:14px;bottom:26px;width:380px;max-width:calc(100vw - 28px);max-height:76vh;overflow:auto;background:#fff;border-radius:14px;box-shadow:0 10px 36px rgba(10,28,70,.28);z-index:99991;display:none;font-family:"Segoe UI",-apple-system,Arial,sans-serif;color:#13203A}
+#vab-pnl.open{display:block}
+#vab-pnl *{box-sizing:border-box}
+#vab-pnl .h{background:linear-gradient(110deg,#0A1C46,#16307A);color:#fff;padding:12px 14px}
+#vab-pnl .h1{font-size:10px;letter-spacing:1.4px;opacity:.7;font-weight:700}
+#vab-pnl .h2{font-size:15px;font-weight:600;margin-top:2px}
+#vab-pnl .b{padding:12px 14px;font-size:12px}
+#vab-pnl .row{display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-bottom:1px solid #EEF1F6}
+#vab-pnl .row>span:first-child{color:#5A6680}
+#vab-pnl .row>span:last-child{font-weight:600;text-align:right}
+#vab-pnl .btns{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+#vab-pnl button{border:1px solid #D3D9E4;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;background:#F4F6FA;color:#13203A}
+#vab-pnl button.p{background:#0A1C46;border-color:#0A1C46;color:#fff}
+#vab-pnl button:disabled{opacity:.5;cursor:default}
+#vab-pnl .msg{margin-top:8px;font-size:11.5px;color:#5A6680;min-height:14px;white-space:pre-wrap}
+#vab-pnl .log{margin-top:8px;max-height:220px;overflow:auto;border-top:1px solid #EEF1F6;padding-top:6px}
+#vab-pnl .li{font-size:11px;padding:3px 0;color:#3C4660;display:flex;gap:6px;flex-wrap:wrap}
+#vab-pnl .ok{color:#11815A}#vab-pnl .er{color:#C2352C}#vab-pnl .wr{color:#A85F00}
+</style>
+<div id="vab-dot" title="Atama Bildirimi"></div>
+<div id="vab-pnl">
+  <div class="h"><div class="h1">VIP HAFIZA · VVIP ALTYAPI</div><div class="h2">Atama Bildirimi</div></div>
+  <div class="b">
+    <div class="row"><span>Durum</span><span id="vab-st">—</span></div>
+    <div class="row"><span>Başlangıç</span><span id="vab-bs">—</span></div>
+    <div class="row"><span>Son kontrol</span><span id="vab-sk">—</span></div>
+    <div class="row"><span>Hatırlatma</span><span id="vab-ht">—</span></div>
+    <div class="btns">
+      <button type="button" class="p" id="vab-kur">Kur / Onar</button>
+      <button type="button" id="vab-tog">Pasifleştir</button>
+      <button type="button" id="vab-onz">Önizle</button>
+      <button type="button" id="vab-chk">Şimdi kontrol et</button>
+      <button type="button" id="vab-tst">Test (bana)</button>
+    </div>
+    <div class="msg" id="vab-msg"></div>
+    <div class="log" id="vab-log"></div>
+  </div>
+</div>
+<script>
+(function () {
+  if (window.VHAtama) return;                 // aynı sayfada iki kez eklenirse tek çalışsın
+
+  /* ============================ ⚙️ AYARLAR ============================ */
+  var CFG = {
+    SITE: 'https://ttport.turktelekom.com.tr/gruplar/vip-hafiza',
+    LISTE: 'VVIP Altyapi Takip',
+    LOG_LISTE: 'VVIPAtamaBildirimLog',
+    EK_LIB: 'VVIPAltyapiEkler',               // Altyapı ekranının harita kütüphanesi (P<ProjeID>/HARITA-n.jpg)
+
+    // Takipçi seçenekleri ve e-postaları — Talep Metni Oluşturucu'daki sorumlu listesi de buradan okunur.
+    // Takipçi sütunundaki değer ad soyad olsa da ("Fırat Özyurt") ilk ada göre eşleşir.
+    EKIP: [
+      { ad: 'Fırat',  mail: 'Firat.Ozyurt@turktelekom.com.tr' },
+      { ad: 'Melek',  mail: 'melek.gulce@turktelekom.com.tr' },
+      { ad: 'Arzu',   mail: 'arzuece.karaca@turktelekom.com.tr' },
+      { ad: 'Tarık',  mail: 'tarik.ozden@turktelekom.com.tr' },
+      { ad: 'Enes',   mail: 'enesfurkan.gul@turktelekom.com.tr' },
+      { ad: 'Can',    mail: 'mehmetcan.aksoy@turktelekom.com.tr' },
+      { ad: 'Gülsüm', mail: 'ummugulsum.topal@turktelekom.com.tr' }
+    ],
+    BILGI: [],                                // her maile Bilgi (CC) olarak eklenecek adresler, örn: ['tarik.bektas@turktelekom.com.tr']
+    YONETICILER: ['mehmetcan.aksoy@turktelekom.com.tr'],   // paneli yalnızca bunlar görür
+
+    ALTYAPI_SAYFA: '',                        // boş bırakılabilir: Altyapı sayfasında ilk çalıştığında adresi kendisi öğrenir
+    HATIRLATMA_GUN: 3,                        // atamadan kaç gün sonra eksikler için BİR KEZ hatırlatılsın (0 = hatırlatma yok)
+    KENDINE_DE: false,                        // kaydı açan kişi takipçiyle aynıysa da mail gitsin mi
+    YERLESME_DK: 2,                           // toplu kayıt sürerken parça parça mail gitmesin: kayıt en az bu kadar eski olmalı
+    KONTROL_ARALIGI_DK: 5,
+    KILIT_ZAMAN_ASIMI_DK: 20,
+    HATA_TEKRAR_DK: 15,
+    MAX_DENEME: 3,
+    KONU_ETIKETI: '[VIPH-ATAMA]',             // Outlook kuralı bu etikete bakabilir
+    AYAR_ANAHTAR: 'AYAR|ATAMA'
+  };
+  var BEKLEYEN_DURUM = 'Beklemede';          // yalnızca henüz üst yönetime sunulmamış kayıtlar bildirilir
+  /* =================================================================== */
+
+  function E(id) { return document.getElementById(id); }
+  function esc(v) { return String(v === null || v === undefined ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  function kirp(s) { return String(s == null ? '' : s).replace(/^\s+|\s+$/g, ''); }
+  function kucuk(s) { return kirp(s).replace(/İ/g, 'i').replace(/I/g, 'ı').toLowerCase(); }
+  function canli() { var h = (location.hostname || '').toLowerCase(); return h.indexOf('ttport') > -1 || h.indexOf('turktelekom') > -1; }
+  function p2(n) { return n < 10 ? '0' + n : '' + n; }
+  function tarihTR(d, saatli) {
+    if (!d) return '—'; var x = d instanceof Date ? d : new Date(d); if (isNaN(x.getTime())) return '—';
+    var s = p2(x.getDate()) + '.' + p2(x.getMonth() + 1) + '.' + x.getFullYear();
+    return saatli ? s + ' ' + p2(x.getHours()) + ':' + p2(x.getMinutes()) : s;
+  }
+  function tarihOku(raw) { if (!raw) return null; var m = String(raw).match(/\/Date\((-?\d+)\)\//); var d = m ? new Date(parseInt(m[1], 10)) : new Date(raw); return isNaN(d.getTime()) ? null : d; }
+  function gunGecti(d) { return d ? (Date.now() - d.getTime()) / 86400000 : 0; }
+  function duzMetin(v) { return kirp(String(v == null ? '' : v).replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ')); }
+  function sayi(v) { var n = parseFloat(v); return isNaN(n) ? 0 : n; }
+  function listeUrl(l) { return CFG.SITE + "/_api/web/lists/getbytitle('" + l + "')"; }
+  function siteYolu() { return CFG.SITE.replace(/^https?:\/\/[^\/]+/i, ''); }
+  function tl(n) { n = Math.round(+n || 0); if (!n) return '—'; if (n < 1000) return n + ' TL'; if (n < 1e6) return (Math.round(n / 100) / 10).toLocaleString('tr-TR') + ' K TL'; return (Math.round(n / 10000) / 100).toLocaleString('tr-TR') + ' M TL'; }
+
+  /* Takipçi sütunundaki metni ekip üyesine eşler ("Fırat Özyurt" → Fırat) */
+  function kisiBul(t) {
+    t = kirp(t); if (!t) return null;
+    var w = ' ' + kucuk(t).replace(/[^a-zçğıöşü]+/g, ' ') + ' ', i;
+    for (i = 0; i < CFG.EKIP.length; i++) if (kucuk(CFG.EKIP[i].ad) === kucuk(t) || w.indexOf(' ' + kucuk(CFG.EKIP[i].ad) + ' ') > -1) return CFG.EKIP[i];
+    return null;
+  }
+
+  /* ============================ SHAREPOINT ============================ */
+  var _dg = null, _dgBitis = 0, _tipler = {}, _ben = null, _formUrl = '';
+  function spGet(url) {
+    return fetch(url, { credentials: 'include', headers: { 'Accept': 'application/json;odata=verbose' } }).then(function (r) {
+      if (!r.ok) return r.text().then(function (t) { var e = new Error('GET ' + r.status + ': ' + t.replace(/<[^>]+>/g, ' ').slice(0, 160)); e.status = r.status; throw e; });
+      return r.json();
+    }).then(function (j) { return j.d; });
+  }
+  function digest() {
+    if (_dg && Date.now() < _dgBitis) return Promise.resolve(_dg);
+    return fetch(CFG.SITE + '/_api/contextinfo', { method: 'POST', credentials: 'include', headers: { 'Accept': 'application/json;odata=verbose' } })
+      .then(function (r) { if (!r.ok) throw new Error('Oturum anahtarı alınamadı (' + r.status + ')'); return r.json(); })
+      .then(function (j) { var c = j.d.GetContextWebInformation; _dg = c.FormDigestValue; _dgBitis = Date.now() + (c.FormDigestTimeoutSeconds - 60) * 1000; return _dg; });
+  }
+  function spPost(url, govde, ek) {
+    return digest().then(function (dg) {
+      var h = { 'Accept': 'application/json;odata=verbose', 'Content-Type': 'application/json;odata=verbose', 'X-RequestDigest': dg };
+      if (ek) for (var k in ek) if (ek.hasOwnProperty(k)) h[k] = ek[k];
+      return fetch(url, { method: 'POST', credentials: 'include', headers: h, body: govde ? JSON.stringify(govde) : undefined });
+    }).then(function (r) {
+      if (!r.ok && r.status !== 204) return r.text().then(function (t) { var e = new Error('POST ' + r.status + ': ' + t.replace(/<[^>]+>/g, ' ').slice(0, 200)); e.status = r.status; throw e; });
+      if (r.status === 204) return null;
+      return r.text().then(function (t) { try { return t ? JSON.parse(t).d : null; } catch (x) { return null; } });
+    });
+  }
+  function tip(l) {
+    if (_tipler[l]) return Promise.resolve(_tipler[l]);
+    return spGet(listeUrl(l) + '?$select=ListItemEntityTypeFullName').then(function (d) { _tipler[l] = d.ListItemEntityTypeFullName; return _tipler[l]; });
+  }
+  function logEkle(v) { return tip(CFG.LOG_LISTE).then(function (t) { v.__metadata = { type: t }; return spPost(listeUrl(CFG.LOG_LISTE) + '/items', v); }); }
+  function logGuncelle(id, v, etag) { return tip(CFG.LOG_LISTE).then(function (t) { v.__metadata = { type: t }; return spPost(listeUrl(CFG.LOG_LISTE) + '/items(' + id + ')', v, { 'X-HTTP-Method': 'MERGE', 'IF-MATCH': etag || '*' }); }); }
+  function logSil(id) { return spPost(listeUrl(CFG.LOG_LISTE) + '/items(' + id + ')', null, { 'X-HTTP-Method': 'DELETE', 'IF-MATCH': '*' }); }
+  function benKimim() {
+    if (_ben) return Promise.resolve(_ben);
+    return spGet(CFG.SITE + '/_api/web/currentuser?$select=Title,Email').then(function (d) { _ben = { ad: d.Title || '', mail: (d.Email || '').toLowerCase() }; return _ben; });
+  }
+  function formUrl() {
+    if (_formUrl) return Promise.resolve(_formUrl);
+    return spGet(listeUrl(CFG.LISTE) + '?$select=DefaultDisplayFormUrl').then(function (d) {
+      _formUrl = location.protocol + '//' + location.host + d.DefaultDisplayFormUrl; return _formUrl;
+    }, function () { return ''; });
+  }
+
+  /* ============================ VERİ ============================ */
+  function ayarOku() {
+    var f = encodeURIComponent("Title eq '" + CFG.AYAR_ANAHTAR + "'");
+    return spGet(listeUrl(CFG.LOG_LISTE) + '/items?$select=Id,Title,Durum,Detay&$filter=' + f + '&$top=1').then(function (d) {
+      var x = d.results[0]; if (!x) return null;
+      var j = {}; try { j = JSON.parse(x.Detay || '{}'); } catch (e) {}
+      return { id: x.Id, aktif: x.Durum === 'AKTIF', baslangic: j.baslangic ? new Date(j.baslangic) : null, kuran: j.kuran || '', altyapiUrl: j.altyapiUrl || '', ham: j };
+    }, function (e) { if (e.status === 404) return null; throw e; });
+  }
+  /* Başlangıçtan sonra açılmış kayıtlar (yalnızca okur) */
+  function kayitlariOku(baslangic) {
+    var f = encodeURIComponent("Created ge datetime'" + baslangic.toISOString() + "'");
+    return spGet(listeUrl(CFG.LISTE) + '/items?$select=*,Author/Title,Author/EMail&$expand=Author&$filter=' + f + '&$orderby=Id%20asc&$top=1000')
+      .then(function (d) { return d.results; });
+  }
+  /* Harita klasörleri tek istekle: { 'P2345678': dosyaSayısı } · okunamazsa null (harita kontrol edilmez) */
+  function haritaKlasorleri() {
+    var u = CFG.SITE + "/_api/web/GetFolderByServerRelativeUrl('" + siteYolu() + '/' + CFG.EK_LIB + "')/Folders?$select=Name,ItemCount&$top=5000";
+    return spGet(u).then(function (d) { var h = {}; (d.results || []).forEach(function (f) { h[f.Name] = f.ItemCount || 0; }); return h; }, function () { return null; });
+  }
+  function loglariOku() {
+    var f = encodeURIComponent("substringof('|',Title)");
+    return spGet(listeUrl(CFG.LOG_LISTE) + '/items?$select=Id,Title,Durum,Deneme,Created,Modified,Olay,KayitID,Kisi,Tetikleyen&$filter=' + f + '&$orderby=Id%20desc&$top=5000')
+      .then(function (d) {
+        var harita = {}, liste = [];
+        d.results.forEach(function (x) {
+          var o = { id: x.Id, anahtar: x.Title, durum: x.Durum, deneme: x.Deneme || 0, olusma: tarihOku(x.Created), degisme: tarihOku(x.Modified),
+            olay: x.Olay, kayitId: x.KayitID, kisi: x.Kisi, tetikleyen: x.Tetikleyen, etag: x.__metadata ? x.__metadata.etag : '*' };
+          liste.push(o);
+          if (!harita[o.anahtar] || o.id < harita[o.anahtar].id) harita[o.anahtar] = o;   // en eski satır esas
+        });
+        return { harita: harita, liste: liste };
+      });
+  }
+
+  /* ============================ EKSİK BİLGİ ============================ */
+  /* Altyapı ekranındaki orEksikler() ile aynı kural + talep yazısı + harita */
+  function eksikler(k, haritalar) {
+    var tur = kirp(k.ProjeTuru).toUpperCase(), e = [];
+    if (tur !== 'BF' && tur !== 'GF') { e.push('Proje Türü (BF/GF)'); tur = ''; }
+    if (!kirp(k.ProjeID)) e.push('Proje ID');
+    if (!(sayi(k.HP) > 0)) e.push('HP');
+    if (!(sayi(k.MaliyetSayisal) > 0 || sayi(k.MaliyetTutari) > 0)) e.push('Toplam Maliyet');
+    if (!(sayi(k.FiberMesafesi) > 0)) e.push('Fiber Mesafesi');
+    if (!duzMetin(k.Adres)) e.push('Adres');
+    if (tur === 'BF') {
+      if (!(sayi(k.CalisanDSL) > 0)) e.push('Çalışan DSL Sayısı');
+      if (!kirp(k.MevcutHiz)) e.push('Mevcut Hız');
+    }
+    if (k.hasOwnProperty('Asama') && !duzMetin(k.Asama)) e.push('Talep yazısı (Aşama)');
+    if (haritalar) { var key = kirp(k.ProjeID) ? 'P' + kirp(k.ProjeID) : 'ITEM-' + k.Id; if (!haritalar[key]) e.push('Harita görseli'); }
+    return e;
+  }
+
+  /* ============================ OLAY TESPİTİ ============================ */
+  function anahtar(olay, id, kisi) { return olay + '|' + id + '|' + kisi; }
+  function bitmis(loglar, k) {
+    var l = loglar.harita[k];
+    return l && (l.durum === 'Gonderildi' || l.durum === 'Atlandi' || (l.durum === 'Hata' && l.deneme >= CFG.MAX_DENEME));
+  }
+  /* → [{olay:'ATA'|'HAT', kayit, kisi, eksik, anahtar}] */
+  function olaylariBul(kayitlar, loglar, haritalar, hemen) {
+    var out = [];
+    kayitlar.forEach(function (k) {
+      if (kirp(k.OnayRed) !== BEKLEYEN_DURUM) return;
+      var kisi = kisiBul(k.Takipci); if (!kisi) return;
+      var olusma = tarihOku(k.Created);
+      if (!hemen && olusma && (Date.now() - olusma.getTime()) < CFG.YERLESME_DK * 60000) return;   // toplu kayıt sürüyor olabilir
+      var aAta = anahtar('ATA', k.Id, kisi.ad), e = eksikler(k, haritalar);
+      if (!bitmis(loglar, aAta)) { out.push({ olay: 'ATA', kayit: k, kisi: kisi, eksik: e, anahtar: aAta }); return; }
+      if (CFG.HATIRLATMA_GUN > 0 && e.length) {
+        var ata = loglar.harita[aAta], aHat = anahtar('HAT', k.Id, kisi.ad);
+        if (ata.durum === 'Gonderildi' && gunGecti(ata.degisme || ata.olusma) >= CFG.HATIRLATMA_GUN && !bitmis(loglar, aHat))
+          out.push({ olay: 'HAT', kayit: k, kisi: kisi, eksik: e, anahtar: aHat });
+      }
+    });
+    return out;
+  }
+  function kendisiMi(o) { return !CFG.KENDINE_DE && o.kayit.Author && kucuk(o.kayit.Author.EMail) === kucuk(o.kisi.mail); }
+
+  /* ============================ KİLİT ============================ */
+  /* Aynı bildirimi iki tarayıcı aynı anda göndermesin (ÖHE / Taahhüt alarmıyla aynı yöntem) */
+  function kilitAl(o, loglar) {
+    var k = o.anahtar, mevcut = loglar.harita[k], ben = _ben ? _ben.ad : '';
+    if (!mevcut) {
+      var benimId = null;
+      return logEkle({ Title: k, Olay: o.olay, KayitID: o.kayit.Id, Kisi: o.kisi.ad, Durum: 'Gonderiliyor', Deneme: 1, Tetikleyen: ben })
+        .then(function (d) { benimId = d.Id; return spGet(listeUrl(CFG.LOG_LISTE) + '/items?$select=Id&$filter=' + encodeURIComponent("Title eq '" + k + "'") + '&$orderby=Id'); })
+        .then(function (d) {
+          if (d.results.length && d.results[0].Id !== benimId) return logSil(benimId).then(function () { return null; }, function () { return null; });
+          return { id: benimId };
+        })['catch'](function () { return null; });            // benzersizlik ihlali = başkası aldı
+    }
+    var yas = mevcut.degisme ? (Date.now() - mevcut.degisme.getTime()) / 60000 : 999;
+    var devral = (mevcut.durum === 'Gonderiliyor' && yas >= CFG.KILIT_ZAMAN_ASIMI_DK) ||
+                 (mevcut.durum === 'Hata' && mevcut.deneme < CFG.MAX_DENEME && yas >= CFG.HATA_TEKRAR_DK);
+    if (!devral) return Promise.resolve(null);
+    return logGuncelle(mevcut.id, { Durum: 'Gonderiliyor', Deneme: mevcut.deneme + 1, Tetikleyen: ben }, mevcut.etag)
+      .then(function () { return { id: mevcut.id }; }, function () { return null; });   // 412 = başkası aldı
+  }
+
+  /* ============================ MAİL ============================ */
+  var F = "font-family:'Segoe UI',Arial,Helvetica,sans-serif;";
+  function kayitLinki(id, ayar) {
+    var u = CFG.ALTYAPI_SAYFA || (ayar && ayar.altyapiUrl) || '';
+    if (u) return u + (u.indexOf('?') > -1 ? '&' : '?') + 'kayit=' + id;
+    return _formUrl ? _formUrl + '?ID=' + id : CFG.SITE;
+  }
+  function mailOlustur(olay, kisi, L, ayar, test) {
+    var eksikli = L.filter(function (o) { return o.eksik.length; }).length, hat = olay === 'HAT';
+    var baslik = hat ? 'Eksik bilgi hatırlatması' : (L.length === 1 ? 'Size 1 talep atandı' : 'Size ' + L.length + ' talep atandı');
+    var giris = hat
+      ? 'Size atanan aşağıdaki ' + (L.length === 1 ? 'talepte' : L.length + ' talepte') + ' bilgiler hâlâ eksik. Üst yönetime sunulabilmesi için tamamlanması gerekmektedir.'
+      : 'VVIP Altyapı Takip\'te aşağıdaki ' + (L.length === 1 ? 'talep' : L.length + ' talep') + ' <b>Beklemede</b> durumunda adınıza atandı.' +
+        (eksikli ? ' <b>' + eksikli + '</b> talepte eksik bilgi var; üst yönetime sunulabilmesi için tamamlanması gerekmektedir.' : ' Bilgileri tam görünüyor.');
+    var th = 'background:#F4F6FA;color:#5A6680;font-size:11px;font-weight:700;letter-spacing:.4px;text-align:left;padding:8px 10px;border-bottom:1px solid #E3E7EF';
+    var td = F + 'font-size:13px;color:#13203A;padding:9px 10px;border-bottom:1px solid #EEF1F6;vertical-align:top';
+    var satirlar = L.map(function (o) {
+      var k = o.kayit, pid = kirp(k.ProjeID) || '—', link = kayitLinki(k.Id, ayar);
+      var alt = [kirp(k.Sehira), kirp(k.ProjeTuru), k.HP ? sayi(k.HP) + ' HP' : '', tl(k.MaliyetSayisal || k.MaliyetTutari)].filter(function (x) { return x && x !== '—'; }).join(' · ');
+      var eks = o.eksik.length
+        ? o.eksik.map(function (x) { return '<span style="display:inline-block;background:#FCEAE8;color:#C2352C;font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:10px;margin:0 4px 4px 0">' + esc(x) + '</span>'; }).join('')
+        : '<span style="color:#11815A;font-weight:600">✓ Tam</span>';
+      return '<tr><td style="' + td + ';white-space:nowrap"><a href="' + esc(link) + '" style="color:#1F55C9;font-weight:700;text-decoration:none">' + esc(pid) + '</a></td>' +
+        '<td style="' + td + '"><b>' + esc(k.Title || '') + '</b>' + (alt ? '<div style="color:#5A6680;font-size:12px;margin-top:2px">' + esc(alt) + '</div>' : '') + '</td>' +
+        '<td style="' + td + '">' + eks + '</td></tr>';
+    }).join('');
+    var anaLink = CFG.ALTYAPI_SAYFA || (ayar && ayar.altyapiUrl) || (_formUrl ? _formUrl.replace(/\/[^\/]+$/, '') : CFG.SITE);
+    var html =
+      '<table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#EEF1F7"><tr><td align="center" style="padding:20px 10px">' +
+      '<table width="660" cellpadding="0" cellspacing="0" border="0" style="width:660px;max-width:660px;background:#FFFFFF;border:1px solid #E1E5EE">' +
+      '<tr><td bgcolor="#0A1C46" style="padding:18px 26px">' +
+        '<div style="' + F + 'font-size:11px;font-weight:700;letter-spacing:1.5px;color:#9FB3E6">VIP HAFIZA · VVIP ALTYAPI TAKİP</div>' +
+        '<div style="' + F + 'font-size:20px;font-weight:600;color:#FFFFFF;margin-top:4px">' + esc(baslik) + '</div></td></tr>' +
+      (test ? '<tr><td bgcolor="#FDECEA" style="' + F + 'padding:8px 26px;font-size:12px;color:#B3261E;font-weight:600">TEST MAİLİDİR — kurulumu doğrulamak için gönderildi.</td></tr>' : '') +
+      '<tr><td style="' + F + 'padding:20px 26px 6px;font-size:14px;color:#13203A;line-height:1.55">Merhaba ' + esc(kisi.ad) + ',<br>' + giris + '</td></tr>' +
+      '<tr><td style="padding:10px 26px 18px"><table width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #E3E7EF">' +
+        '<tr><th style="' + F + th + '">PROJE ID</th><th style="' + F + th + '">KAYIT</th><th style="' + F + th + '">EKSİK BİLGİLER</th></tr>' + satirlar + '</table></td></tr>' +
+      '<tr><td style="padding:0 26px 22px"><table cellpadding="0" cellspacing="0" border="0"><tr><td bgcolor="#0A1C46" style="border-radius:8px;padding:10px 18px">' +
+        '<a href="' + esc(anaLink) + '" style="' + F + 'font-size:13px;font-weight:600;color:#FFFFFF;text-decoration:none">Altyapı Takip\'te aç</a></td></tr></table></td></tr>' +
+      '<tr><td bgcolor="#F7F8FB" style="' + F + 'padding:12px 26px;font-size:11px;color:#7D889F;line-height:1.5;border-top:1px solid #E1E5EE">' +
+        'Proje ID\'ye tıklayınca kayıt Altyapı Takip ekranında açılır. Bölge cevabı geldiğinde Talep Metni Oluşturucu\'ya yapıştırıp künyeyi kayda tek tıkla yazabilirsiniz.<br>' +
+        (!hat && CFG.HATIRLATMA_GUN > 0 && eksikli ? 'Eksikler ' + CFG.HATIRLATMA_GUN + ' gün içinde tamamlanmazsa bir kez hatırlatılır. ' : '') +
+        'Bu mail VIP Hafıza tarafından otomatik gönderilmiştir, lütfen yanıtlamayınız. · ' + esc(tarihTR(new Date(), true)) + '</td></tr>' +
+      '</table></td></tr></table>';
+    var pids = L.map(function (o) { return kirp(o.kayit.ProjeID) || ('#' + o.kayit.Id); });
+    var konu = (test ? '[TEST] ' : '') + CFG.KONU_ETIKETI + ' ' + (hat
+      ? 'Hatırlatma: ' + L.length + ' talepte eksik bilgi tamamlanmadı'
+      : 'Size ' + L.length + ' VVIP altyapı talebi atandı' + (eksikli ? ' — ' + eksikli + ' talepte eksik bilgi var' : '')) +
+      ' (' + (pids.length > 6 ? pids.slice(0, 6).join(', ') + '…' : pids.join(', ')) + ')';
+    return { konu: konu, govde: html };
+  }
+  function spMail(to, cc, konu, govde) {
+    var pr = { __metadata: { type: 'SP.Utilities.EmailProperties' }, To: { results: to }, Subject: konu, Body: govde };
+    if (cc && cc.length) pr.CC = { results: cc };
+    return spPost(CFG.SITE + '/_api/SP.Utilities.Utility.SendEmail', { properties: pr });
+  }
+  /* Önce Bilgi'yle birlikte; olmazsa (geçersiz Bilgi adresi) yalnızca takipçiye */
+  function mailGonder(to, konu, govde) {
+    return spMail([to], CFG.BILGI, konu, govde)['catch'](function (e) {
+      if (!CFG.BILGI.length) throw e;
+      return spMail([to], [], konu, govde);
+    });
+  }
+
+  /* ============================ GÖNDERİM (kişi başına tek mail) ============================ */
+  function grupIsle(olay, kisi, L, loglar, ayar, ozet) {
+    var kilitli = [], i = 0;
+    function kilitSirada() {
+      if (i >= L.length) return Promise.resolve();
+      var o = L[i++];
+      return kilitAl(o, loglar).then(function (k) { if (k) { o.logId = k.id; kilitli.push(o); } }).then(kilitSirada);
+    }
+    return kilitSirada().then(function () {
+      if (!kilitli.length) return;
+      var m = mailOlustur(olay, kisi, kilitli, ayar, false);
+      return mailGonder(kisi.mail, m.konu, m.govde).then(function () {
+        ozet.gonderilen.push({ kisi: kisi.ad, olay: olay, adet: kilitli.length });
+        return Promise.all(kilitli.map(function (o) {
+          return logGuncelle(o.logId, { Durum: 'Gonderildi', Detay: kisi.mail + (o.eksik.length ? ' · eksik: ' + o.eksik.join(', ') : ' · eksik yok') })['catch'](function () {});
+        }));
+      }, function (e) {
+        ozet.hata.push(kisi.ad + ' (' + e.message + ')');
+        return Promise.all(kilitli.map(function (o) { return logGuncelle(o.logId, { Durum: 'Hata', Detay: String(e.message || e).slice(0, 500) })['catch'](function () {}); }));
+      });
+    });
+  }
+  function atlandiYaz(o, neden, loglar) {
+    if (loglar.harita[o.anahtar]) return Promise.resolve();
+    return logEkle({ Title: o.anahtar, Olay: o.olay, KayitID: o.kayit.Id, Kisi: o.kisi.ad, Durum: 'Atlandi', Deneme: 0, Tetikleyen: _ben ? _ben.ad : '', Detay: neden })['catch'](function () {});
+  }
+
+  /* ============================ ANA DÖNGÜ ============================ */
+  var _calisiyor = null, _sonKontrol = null, _ayar = null, _yonetici = false;
+  /* s = { hemen:true } → kayıt yeni açıldıysa da bekleme (Talep ekranı toplu kayıttan sonra çağırır)
+         { atla:[kayıtId,…] } → bu kayıtların atama maili gönderilmesin ("Atlandi" yazılır) */
+  function kontrol(s, elle) {
+    s = s || {};
+    if (!canli()) return Promise.resolve({ durum: 'onizleme', gonderilen: [], hata: [], atlanan: [] });
+    if (_calisiyor) return _calisiyor.then(function () { return kontrol(s, elle); });
+    if (!elle && !s.hemen && document.hidden) return Promise.resolve(null);
+    var ozet = { durum: '', gonderilen: [], hata: [], atlanan: [] };
+    _calisiyor = benKimim().then(ayarOku).then(function (ayar) {
+      _ayar = ayar;
+      if (!ayar || !ayar.baslangic) { ozet.durum = 'kurulmamis'; return; }
+      return altyapiAdresiniOgren(ayar).then(function () {
+        if (!ayar.aktif) { ozet.durum = 'pasif'; return; }
+        ozet.durum = 'aktif';
+        return Promise.all([kayitlariOku(ayar.baslangic), loglariOku(), haritaKlasorleri(), formUrl()]).then(function (r) {
+          var loglar = r[1], olaylar = olaylariBul(r[0], loglar, r[2], !!s.hemen), atla = s.atla || [], G = {}, sira = [], z = Promise.resolve();
+          olaylar.forEach(function (o) {
+            if (o.olay === 'ATA' && atla.indexOf(o.kayit.Id) > -1) { ozet.atlanan.push(o.kisi.ad); z = z.then(function () { return atlandiYaz(o, 'Talep ekranında bildirim kapatıldı', loglar); }); return; }
+            if (kendisiMi(o)) { ozet.atlanan.push(o.kisi.ad); z = z.then(function () { return atlandiYaz(o, 'Kaydı açan kişi takipçiyle aynı (KENDINE_DE=false)', loglar); }); return; }
+            var g = o.olay + '|' + o.kisi.ad; if (!G[g]) { G[g] = { olay: o.olay, kisi: o.kisi, L: [] }; sira.push(g); } G[g].L.push(o);
+          });
+          sira.forEach(function (g) { z = z.then(function () { return grupIsle(G[g].olay, G[g].kisi, G[g].L, loglar, ayar, ozet); }); });
+          return z;
+        });
+      });
+    }).then(function () {
+      _sonKontrol = new Date();
+      if (elle) mesaj(ozet.durum === 'kurulmamis' ? 'Kurulmamış — önce Kur / Onar.' : ozet.durum === 'pasif' ? 'Pasif — mail atılmıyor.' :
+        ozet.gonderilen.length ? 'Gönderildi: ' + ozet.gonderilen.map(function (g) { return g.kisi + ' (' + g.adet + (g.olay === 'HAT' ? ' hatırlatma' : '') + ')'; }).join(', ') : 'Gönderilecek yeni bildirim yok.', ozet.hata.length ? 'er' : 'ok');
+      return ozet;
+    }, function (e) {
+      ozet.durum = 'hata'; ozet.hata.push(e.message);
+      if (elle || _yonetici) mesaj('Kontrol hatası: ' + e.message, 'er');
+      return ozet;
+    }).then(function (o) { _calisiyor = null; if (_yonetici) panelYenile(); return o; });
+    return _calisiyor;
+  }
+  /* Altyapı sayfasında çalışıyorsa adresini log'a yazar → maillerdeki bağlantılar bu sayfaya gider */
+  function altyapiSayfasiMi() { return typeof window.goForm === 'function' && typeof window.findById === 'function'; }
+  function altyapiAdresiniOgren(ayar) {
+    if (!altyapiSayfasiMi() || CFG.ALTYAPI_SAYFA) return Promise.resolve();
+    var u = location.protocol + '//' + location.host + location.pathname;
+    if (ayar.altyapiUrl === u) return Promise.resolve();
+    var j = ayar.ham || {}; j.altyapiUrl = u; ayar.altyapiUrl = u;
+    return logGuncelle(ayar.id, { Detay: JSON.stringify(j) })['catch'](function () {});
+  }
+  function onizle() {
+    return benKimim().then(ayarOku).then(function (ayar) {
+      var bas = ayar && ayar.baslangic ? ayar.baslangic : new Date(Date.now() - 7 * 86400000);
+      return Promise.all([kayitlariOku(bas), ayar ? loglariOku() : { harita: {}, liste: [] }, haritaKlasorleri(), formUrl()]).then(function (r) {
+        return olaylariBul(r[0], r[1], r[2], true).map(function (o) {
+          return { olay: o.olay, kisi: o.kisi.ad, kayit: o.kayit.Id, proje: o.kayit.ProjeID, ad: o.kayit.Title, eksik: o.eksik.join(', ') || '—', kendisi: kendisiMi(o) };
+        });
+      });
+    });
+  }
+
+  /* ============================ KUR / ONAR ============================ */
+  function alanVarMi(ad) { return spGet(listeUrl(CFG.LOG_LISTE) + "/fields/getbyinternalnameortitle('" + ad + "')?$select=InternalName").then(function () { return true; }, function () { return false; }); }
+  function alanEkle(ad, tur) {
+    return alanVarMi(ad).then(function (v) {
+      if (v) return;
+      var g = tur === 'sayi' ? { __metadata: { type: 'SP.FieldNumber' }, FieldTypeKind: 9, Title: ad }
+            : tur === 'not' ? { __metadata: { type: 'SP.FieldMultiLineText' }, FieldTypeKind: 3, Title: ad, RichText: false, NumberOfLines: 6 }
+            : { __metadata: { type: 'SP.FieldText' }, FieldTypeKind: 2, Title: ad };
+      return spPost(listeUrl(CFG.LOG_LISTE) + '/fields', g);
+    });
+  }
+  function kurOnar() {
+    var adimlar = [], benzersiz = true;
+    function adim(s) { adimlar.push(s); mesaj(adimlar.join(' · '), ''); }
+    mesaj('Kuruluyor…', ''); E('vab-kur').disabled = true;
+    return spGet(listeUrl(CFG.LOG_LISTE) + '?$select=Id').then(function () { adim('Log listesi mevcut'); }, function (e) {
+      if (e.status !== 404) throw e;
+      return spPost(CFG.SITE + '/_api/web/lists', { __metadata: { type: 'SP.List' }, BaseTemplate: 100, Title: CFG.LOG_LISTE,
+        Description: 'VVIP Altyapı atama / eksik bilgi bildirimlerinin kaydı (otomatik — silmeyiniz). Bir satırı silerseniz o bildirim yeniden gönderilir.' })
+        .then(function () { adim('Log listesi oluşturuldu'); });
+    })
+    .then(function () { return spPost(listeUrl(CFG.LOG_LISTE), { __metadata: { type: 'SP.List' }, EnableModeration: false, EnableVersioning: false, NoCrawl: true }, { 'X-HTTP-Method': 'MERGE', 'IF-MATCH': '*' })['catch'](function () {}); })
+    .then(function () { return alanEkle('Olay'); }).then(function () { return alanEkle('KayitID', 'sayi'); })
+    .then(function () { return alanEkle('Kisi'); }).then(function () { return alanEkle('Durum'); })
+    .then(function () { return alanEkle('Deneme', 'sayi'); }).then(function () { return alanEkle('Tetikleyen'); })
+    .then(function () { return alanEkle('Detay', 'not'); })
+    .then(function () {
+      adim('Alanlar tamam');
+      return spPost(listeUrl(CFG.LOG_LISTE) + "/fields/getbyinternalnameortitle('Title')", { __metadata: { type: 'SP.Field' }, Indexed: true, EnforceUniqueValues: true },
+        { 'X-HTTP-Method': 'MERGE', 'IF-MATCH': '*' }).then(null, function () { benzersiz = false; });
+    })
+    .then(function () {
+      adim(benzersiz ? 'Çift gönderim kilidi açık' : 'Benzersizlik açılamadı (yedek kilit devrede)');
+      var hatali = [], herkes = CFG.EKIP.map(function (k) { return k.mail; }).concat(CFG.BILGI), i = 0;   // SendEmail yalnızca siteyi tanıyan kişilere gönderir
+      function sonraki() {
+        if (i >= herkes.length) return Promise.resolve();
+        var a = herkes[i++];
+        return spPost(CFG.SITE + '/_api/web/ensureuser', { logonName: a }).then(null, function () { hatali.push(a); }).then(sonraki);
+      }
+      return sonraki().then(function () { adim(hatali.length ? 'Tanıtılamayan: ' + hatali.join(', ') : 'Alıcılar siteye tanıtıldı (' + herkes.length + ')'); });
+    })
+    .then(ayarOku)
+    .then(function (ayar) {
+      if (ayar) { adim('Ayar kaydı mevcut (başlangıç korunuyor)'); return; }
+      return logEkle({ Title: CFG.AYAR_ANAHTAR, Olay: 'AYAR', Durum: 'AKTIF', Detay: JSON.stringify({ baslangic: new Date().toISOString(), kuran: _ben ? _ben.ad : '' }) })
+        .then(function () { adim('Sistem aktif — bundan sonra açılan kayıtlar bildirilecek'); });
+    })
+    .then(function () { mesaj('✓ ' + adimlar.join(' · '), 'ok'); return kontrol({}, true); })
+    .then(null, function (e) { mesaj('Kurulum hatası: ' + e.message, 'er'); })
+    .then(function () { E('vab-kur').disabled = false; panelYenile(); });
+  }
+  function aktifPasif() {
+    if (!_ayar) { mesaj('Önce Kur / Onar çalıştırın.', 'wr'); return; }
+    var yeni = _ayar.aktif ? 'PASIF' : 'AKTIF';
+    logGuncelle(_ayar.id, { Durum: yeni }).then(function () { mesaj(yeni === 'AKTIF' ? 'Bildirimler açıldı.' : 'Bildirimler durduruldu.', 'ok'); return kontrol({}, true); },
+      function (e) { mesaj('Hata: ' + e.message, 'er'); });
+  }
+  function testGonder() {
+    mesaj('Test maili hazırlanıyor…', '');
+    benKimim().then(function (b) {
+      var ben = { ad: b.ad.split(' ')[0] || 'Test', mail: b.mail || CFG.YONETICILER[0] };
+      var ornek = [{ kayit: { Id: 0, ProjeID: '2345678', Title: 'Örnek Kayıt', Sehira: 'ANKARA', ProjeTuru: 'BF', HP: 12, MaliyetSayisal: 145000 }, eksik: ['Fiber Mesafesi', 'Mevcut Hız', 'Harita görseli'] },
+                   { kayit: { Id: 0, ProjeID: '2456789', Title: 'Örnek Kayıt 2', Sehira: 'İZMİR', ProjeTuru: 'GF', HP: 20, MaliyetSayisal: 300000 }, eksik: [] }];
+      return Promise.all([ayarOku(), formUrl()]).then(function (r) {
+        var m = mailOlustur('ATA', ben, ornek, r[0], true);
+        return spMail([ben.mail], [], m.konu, m.govde).then(function () { mesaj('Test maili gönderildi → ' + ben.mail, 'ok'); });
+      });
+    })['catch'](function (e) { mesaj('Test hatası: ' + e.message, 'er'); });
+  }
+
+  /* ============================ YÖNETİCİ PANELİ ============================ */
+  function mesaj(m, c) { var el = E('vab-msg'); if (el) { el.textContent = m; el.className = 'msg ' + (c || ''); } }
+  function panelYenile() {
+    var dot = E('vab-dot'); if (!dot) return;
+    E('vab-st').innerHTML = !_ayar ? '<span class="wr">Kurulmadı</span>' : _ayar.aktif ? '<span class="ok">Aktif</span>' : '<span class="er">Pasif</span>';
+    E('vab-bs').textContent = _ayar && _ayar.baslangic ? tarihTR(_ayar.baslangic, true) : '—';
+    E('vab-sk').textContent = _sonKontrol ? tarihTR(_sonKontrol, true) : '—';
+    E('vab-ht').textContent = CFG.HATIRLATMA_GUN > 0 ? CFG.HATIRLATMA_GUN + ' gün sonra, bir kez' : 'kapalı';
+    E('vab-tog').textContent = _ayar && !_ayar.aktif ? 'Aktifleştir' : 'Pasifleştir';
+    dot.className = 'on' + (_ayar && _ayar.aktif ? '' : ' err');
+    if (!/open/.test(E('vab-pnl').className) || !_ayar) return;
+    loglariOku().then(function (l) {
+      var ad = { ATA: 'Atama', HAT: 'Hatırlatma' };
+      E('vab-log').innerHTML = l.liste.slice(0, 15).map(function (x) {
+        var c = x.durum === 'Gonderildi' ? 'ok' : x.durum === 'Hata' ? 'er' : x.durum === 'Atlandi' ? '' : 'wr';
+        return '<div class="li"><span>' + esc(tarihTR(x.degisme, true)) + '</span><b>#' + esc(x.kayitId) + ' ' + esc(ad[x.olay] || x.olay) + ' → ' + esc(x.kisi || '') + '</b><span class="' + c + '">' + esc(x.durum) + '</span></div>';
+      }).join('') || '<div class="li">Henüz bildirim yok.</div>';
+    }, function () {});
+  }
+  function paneliBagla() {
+    var dot = E('vab-dot'), pnl = E('vab-pnl');
+    if (!dot || !pnl) return;
+    dot.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); pnl.className = /open/.test(pnl.className) ? '' : 'open'; panelYenile(); });
+    pnl.addEventListener('click', function (e) { e.stopPropagation(); });
+    document.addEventListener('click', function () { pnl.className = ''; });
+    function bagla(id, fn) { E(id).addEventListener('click', function (e) { e.preventDefault(); fn(); }); }
+    bagla('vab-kur', kurOnar);
+    bagla('vab-tog', aktifPasif);
+    bagla('vab-chk', function () { mesaj('Kontrol ediliyor…', ''); kontrol({}, true); });
+    bagla('vab-tst', testGonder);
+    bagla('vab-onz', function () {
+      mesaj('Hesaplanıyor…', '');
+      onizle().then(function (L) {
+        mesaj(L.length ? L.length + ' bildirim gönderilecek:\n' + L.map(function (x) {
+          return '• ' + (x.olay === 'HAT' ? 'Hatırlatma' : 'Atama') + ' → ' + x.kisi + ' · ' + (x.proje || '#' + x.kayit) + ' · eksik: ' + x.eksik + (x.kendisi ? ' (kendi kaydı — gönderilmez)' : '');
+        }).join('\n') : 'Şu an gönderilecek bildirim yok.', 'ok');
+      }, function (e) { mesaj('Önizleme hatası: ' + e.message, 'er'); });
+    });
+  }
+
+  /* ============================ ALTYAPI SAYFASI: ?kayit=<Id> ============================ */
+  /* Maildeki bağlantı Altyapı Takip'i ?kayit=123 ile açar → kayıtlar yüklenince formu açar */
+  function kayitBaglantisi() {
+    var m = /[?&]kayit=(\d+)/.exec(location.search || ''); if (!m) return;
+    var id = parseInt(m[1], 10), n = 0;
+    (function bekle() {
+      if (altyapiSayfasiMi() && window.ALL && window.ALL.length) {
+        var rec = window.findById(id);
+        if (rec) window.goForm(rec); else if (typeof window.toast === 'function') window.toast('Kayıt #' + id + ' listede bulunamadı', 'err');
+        return;
+      }
+      if (++n < 60) setTimeout(bekle, 500);
+    })();
+  }
+
+  /* ============================ BAŞLAT ============================ */
+  function baslat() {
+    kayitBaglantisi();
+    if (!canli()) return;
+    benKimim().then(function (b) {
+      _yonetici = CFG.YONETICILER.map(function (m) { return m.toLowerCase(); }).indexOf(b.mail) >= 0;
+      if (_yonetici) { paneliBagla(); ayarOku().then(function (a) { _ayar = a; panelYenile(); }, function () {}); }
+    }, function () {}).then(function () {
+      setTimeout(function () { kontrol({}); }, 6000);
+      setInterval(function () { kontrol({}); }, CFG.KONTROL_ARALIGI_DK * 60000);
+      document.addEventListener('visibilitychange', function () { if (!document.hidden && (!_sonKontrol || Date.now() - _sonKontrol.getTime() > 60000)) kontrol({}); });
+    });
+  }
+  window.VHAtama = {
+    kontrol: function (s) { return kontrol(s || {}, false); },
+    onizle: onizle,
+    durum: function () { return ayarOku(); },
+    ekipAdlari: function () { return CFG.EKIP.map(function (k) { return k.ad; }); },
+    eksikler: eksikler,
+    CFG: CFG
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', baslat); else baslat();
+})();
+</script>
+<!-- ═══ /ATAMA BİLDİRİMİ ═══ -->
+
 <style>
 
 /* ════════ TALEP METNİ OLUŞTURUCU v2.0 — arayüz ════════ */
@@ -231,6 +823,15 @@
 #tmo .tm-karar blockquote{margin:10px 0;padding:8px 12px;border-radius:10px;background:#F7F8FB;font-size:13.5px;color:var(--t1)}
 #tmo .tm-karar-aks{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}
 #tmo .tm-karar-aks label{flex:0 0 190px;margin:0}
+/* v2.2 Toptan görüşü: proje proje, karar değil not */
+#tmo .tm-karar-aks{align-items:center;margin-top:10px}
+#tmo .tm-bilgi-not{background:var(--tt-l);color:var(--nv);border-radius:10px;padding:8px 12px;font-size:12.5px;margin:4px 0 2px}
+#tmo .tm-uyari-sat{background:var(--warn-l);color:var(--warn);border-radius:10px;padding:7px 12px;font-size:12.5px;margin:6px 0}
+#tmo .tm-gorus-liste{border:1px solid var(--line);border-radius:12px;overflow:hidden}
+#tmo label.tm-gorus-sat{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0;padding:9px 12px;border-top:1px solid var(--line);font-size:13px;font-weight:400;color:var(--t1);cursor:pointer}
+#tmo label.tm-gorus-sat:first-child{border-top:0}
+#tmo label.tm-gorus-sat.pasif{cursor:default;opacity:.7}
+#tmo label.tm-gorus-sat small{flex-basis:100%;padding-left:24px;color:var(--t2);font-size:12px}
 
 /* ── toplu talep ── */
 #tmo .tm-toplu-bas{padding:16px 18px 14px}
@@ -296,6 +897,13 @@
 #tmo .tm-sheet-alt{display:flex;gap:10px;align-items:center;flex-wrap:wrap;border-top:1px solid var(--line);margin:14px -20px 0;padding:12px 20px 0}
 #tmo .tm-yapan{display:flex;align-items:center;gap:8px;margin:0;font-size:12px}
 #tmo .tm-yapan input{width:170px;padding:6px 9px}
+#tmo .tm-yapan.bilinen input{display:none}
+#tmo .tm-yapan button.b-link{padding:0 2px !important;font-size:12px !important}
+#tmo label.tm-cb-sat{display:flex;gap:9px;align-items:flex-start;margin:0;font-size:13px;font-weight:600;color:var(--t1);cursor:pointer;flex:1;min-width:230px}
+#tmo label.tm-cb-sat input{margin-top:2px}
+#tmo label.tm-cb-sat small{display:block;font-size:11.5px;font-weight:400;color:var(--t2)}
+#tmo .tm-sheet-aks{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px}
+#tmo .tm-ok-ozet{font-size:12.5px;color:var(--t2)}
 #tmo .tm-ok-liste{display:flex;flex-direction:column;gap:8px}
 #tmo .okSatir{display:flex;gap:12px;align-items:flex-start;border:1px solid var(--line);border-radius:12px;padding:10px 12px}
 #tmo .okSatir .tm-cb{margin:3px 0 0}
@@ -402,7 +1010,7 @@
       <div class="izgara">
         <div class="kart tm-proje" id="tmoBaslik"></div>
 
-        <div class="kart">
+        <div class="kart" id="tmoMetinKart">
           <div class="kart-bas"><h3>Talep metni</h3></div>
           <ul class="uyarilar" id="tmoUyari"></ul>
           <div class="cikti" id="tmoCikti">Okuma yapıldığında metin burada oluşur.</div>
@@ -1376,14 +1984,13 @@
   var M=window.TMO_MOTOR, U=window.TMO||{};
 
   /* ⚙️ AYARLAR */
-  var EKIP=['Fırat','Melek','Arzu','Tarık','Enes','Can','Gülsüm'];            // Takipçi listesiyle aynı
+  var EKIP=(window.VHAtama&&window.VHAtama.ekipAdlari())||['Fırat','Melek','Arzu','Tarık','Enes','Can','Gülsüm'];   // v2.2: kişiler ve e-postaları Atama Bildirimi bloğundaki EKIP ayarından gelir
   var VIP_KUTU='vipsosyalmedyamusterideneyimi@turktelekom.com.tr';             // bölgeye yazılan maillerde bilgi (Cc)
   var TT_SITE='https://ttport.turktelekom.com.tr/gruplar/vip-hafiza', TT_LIST='VVIP Altyapi Takip', DGH_LIST='VVIPDegisiklikGecmisi';
   var ESIK_HP_BASI=U.esik||5500;     // Tek talep ekranıyla aynı eşik (oradan okunur)
   var ON_KAYIT_SOR=true;             // Dağıtım mesajı kopyalanınca "VVIP Altyapı Takip'e kayıt açılsın mı?" diye sorar
-  var BILDIRIM_MAIL=true;           // v2.1: ön kayıt açılınca takipçiye otomatik bildirim maili (SharePoint üzerinden, gönderen VIP Hafıza)
-  var KENDINE_DE=false;             // kendinize atadığınız kayıtlar için de mail gelsin mi
-  var EKIP_MAIL={'Fırat':'','Melek':'','Arzu':'','Tarık':'','Enes':'','Can':'mehmetcan.aksoy@turktelekom.com.tr','Gülsüm':''};   // boş olanlar site kullanıcıları arasında adıyla aranır; bulunamazsa buraya e-postayı yazın
+  var BILDIRIM_MAIL=true;           // ön kayıt penceresinde "Takipçilere atama maili" kutusu görünsün mü (mail Atama Bildirimi bloğundan gider;
+                                    // e-posta adresleri, kendine mail, hatırlatma günü o bloğun AYARLAR'ındadır)
   var MAILTO_SINIR=1900;             // Outlook'un mailto uzunluk sınırı; aşılırsa metin panoya kopyalanır
 
   function $(id){ return document.getElementById(id); }
@@ -1834,12 +2441,20 @@
       h+='</div>';
     }else h+='<div class="bos-durum">Kaydedilecek proje yok.</div>';
     if(pasif.length) h+='<p class="alt" style="margin:10px 0 0">Kaydedilmeyecek: '+pasif.map(function(p){ return '<b>'+esc(p[0].projeId)+'</b> ('+esc(p[1].neden)+')'; }).join(' · ')+'</p>';
-    h+='<div class="tm-sheet-alt"><label class="tm-yapan">İşlemi yapan <input id="tpOkYapan" value="'+esc(yapan)+'" placeholder="Adınız"></label><span class="bosluk"></span>'+
-      (BILDIRIM_MAIL?'<label class="tm-yapan"><input type="checkbox" id="tpOkBildir" checked> Takipçilere bildirim maili</label>':'')+'<button type="button" class="b-sade" id="tpOkHayir">Vazgeç</button><button type="button" class="b-ana" id="tpOkEvet"></button></div>'+
+    h+='<div class="tm-sheet-alt">'+
+        (BILDIRIM_MAIL?'<label class="tm-cb-sat"><input type="checkbox" id="tpOkBildir" checked><span>Takipçilere atama maili gönder<small>kişi başına tek mail · eksik bilgiler listelenir</small></span></label>':'')+
+        '<label class="tm-yapan'+(yapan?' bilinen':'')+'">İşlemi yapan '+(yapan?'<b>'+esc(yapan)+'</b> <button type="button" class="b-link" id="tpOkYapanDeg">değiştir</button>':'')+'<input id="tpOkYapan" value="'+esc(yapan)+'" placeholder="Adınız"></label>'+
+      '</div><div class="tm-sheet-aks"><span class="tm-ok-ozet" id="tpOkOzet"></span><span class="bosluk"></span><button type="button" class="b-sade" id="tpOkHayir">Vazgeç</button><button type="button" class="b-ana" id="tpOkEvet"></button></div>'+
       '<div class="bilgi" id="tpOkBilgi">Her proje açılmadan hemen önce VIP Hafıza\'da tekrar aranır; kayıtlıysa atlanır.</div>';
     g.innerHTML=h;
     var hazir=!canli||ALAN_DURUM==='tamam';
-    function say(){ var n=document.querySelectorAll('#tpKayitModal .tpOkSec:checked').length; $('tpOkEvet').textContent=!hazir?'⏳ Hazırlanıyor…':n?'Kaydet ('+n+')':'Seçili proje yok'; $('tpOkEvet').disabled=!n||!hazir; }
+    function say(){
+      var C=document.querySelectorAll('#tpKayitModal .tpOkSec:checked'), n=C.length, G={}, sira=[], j;
+      for(j=0;j<C.length;j++){ var sat=C[j].parentNode; while(sat&&!/\bokSatir\b/.test(sat.className||'')) sat=sat.parentNode; var rr=sat&&TP.satirlar[+sat.getAttribute('data-k')]; if(rr){ if(!G[rr.sorumluSec]){ G[rr.sorumluSec]=0; sira.push(rr.sorumluSec); } G[rr.sorumluSec]++; } }
+      $('tpOkEvet').textContent=!hazir?'⏳ Hazırlanıyor…':n?'Kaydet ('+n+')':'Seçili proje yok'; $('tpOkEvet').disabled=!n||!hazir;
+      var oz=$('tpOkOzet'); if(oz) oz.innerHTML=n?sira.map(function(k){ return '<b>'+esc(k)+'</b> '+G[k]; }).join(' · ')+' talep alacak':'';
+    }
+    var yd=$('tpOkYapanDeg'); if(yd) yd.addEventListener('click',function(ev){ ev.preventDefault(); this.parentNode.className='tm-yapan'; $('tpOkYapan').focus(); $('tpOkYapan').select(); });
     var cb=document.querySelectorAll('#tpKayitModal .tpOkSec'), i;
     for(i=0;i<cb.length;i++) cb[i].addEventListener('change',say);
     say();
@@ -2006,7 +2621,7 @@
   }
   function kayitlariAc(){
     var yapan=kirp($('tpOkYapan').value);
-    if(!yapan){ $('tpOkYapan').className='hata'; toast('İşlemi yapan (log için) boş olamaz'); return; }
+    if(!yapan&&canliMi()){ $('tpOkYapan').parentNode.className='tm-yapan'; $('tpOkYapan').className='hata'; toast('İşlemi yapan (log için) boş olamaz'); return; }
     $('tpOkYapan').className='';
     try{ localStorage.setItem('at_user',yapan); }catch(e){}
     var trs=document.querySelectorAll('#tpKayitModal .okSatir'), is=[], i;
@@ -2022,7 +2637,7 @@
       if(hata) btn.textContent='⚠️ Durdu';
       else { btn.disabled=false; if(acilan&&!tp.dagitildi){ btn.textContent='Sıradaki: Dağıtımı kopyala →'; btn.setAttribute('data-sonra','dagitim'); } else { btn.textContent='Tamam'; btn.setAttribute('data-sonra','kapat'); } }
       $('tpOkBilgi').innerHTML=(acilan?'<b>'+acilan+' kayıt açıldı'+(canli?'':' (önizleme)')+'.</b> ':'')+(atlanan?atlanan+' proje zaten kayıtlı olduğu için atlandı. ':'')+(hata?'<span style="color:var(--crit)">'+esc(hata)+'</span>':'Bölge cevabı gelince maili Yeni talep\'e yapıştırın; künye kayda tek tıkla yazılır.');
-      if(bildir&&acilanlar.length) atamaBildir(acilanlar,yapan,function(sn){ var bb=$('tpOkBilgi'), m=bildirimMetni(sn); if(bb&&m) bb.innerHTML+='<br>'+esc(m); if(m) setTimeout(function(){ toast(m); },1600); });
+      if(acilanlar.length) atamaBildir(acilanlar,yapan,function(sn){ var bb=$('tpOkBilgi'), m=bildirimMetni(sn); if(bb&&m) bb.innerHTML+='<br>'+esc(m); if(m) setTimeout(function(){ toast(m); },1600); },!bildir);
       if(tp===TP) ciz();
       toast(acilan?'🗂️ '+acilan+' ön kayıt açıldı'+(canli?'':' (önizleme)'):'Kayıt açılmadı');
     }
@@ -2066,7 +2681,8 @@
   var RX_BUTCE=/^butceturu?$|^butcetip/, RX_FIBER=/^fibermesafe/, RX_HIZ=/^mevcuthiz|^hiz$/;
 
   function kullanici(){
-    var u=''; try{ u=localStorage.getItem('at_user')||''; }catch(e){}
+    var u=window.TMO_BEN&&window.TMO_BEN.ad||'';   // v2.2: oturumdaki kişi (TTPort) — elle ad sormaya gerek kalmaz
+    if(!u) try{ u=localStorage.getItem('at_user')||''; }catch(e){}
     if(!u&&window._spPageContextInfo) u=window._spPageContextInfo.userDisplayName||'';
     return u;
   }
@@ -2187,9 +2803,12 @@
       }
       function bitti(ok,L,sinirli){
         if(ok){ HF.items=L; HF.detay=!!detay&&!sinirli; HF.ts=Date.now(); }
-        HF.durum=ok?'tamam':'hata';
-        var q=HF.q; HF.q=[];
-        cb&&cb(); q.forEach(function(f){ f(); });
+        function son(){ HF.durum=ok?'tamam':'hata'; var q=HF.q; HF.q=[]; cb&&cb(); q.forEach(function(f){ f(); }); }
+        if(!ok||!detay){ son(); return; }
+        /* v2.2: harita görselleri Altyapı kütüphanesinde (P<ProjeID> klasörleri) — tek istekle sayılır */
+        spGet(TT_SITE+"/_api/web/GetFolderByServerRelativeUrl('"+odq(siteYolu()+'/'+EK_LIB)+"')/Folders?$select=Name,ItemCount&$top=5000").then(function(d){
+          var h={}; (d.value||[]).forEach(function(f){ h[f.Name]=f.ItemCount||0; }); HF.haritalar=h;
+        })['catch'](function(){ HF.haritalar=null; }).then(son);
       }
       yukle(hfSecim(detay),false);
     });
@@ -2457,6 +3076,27 @@
   function ekSil(id,ad,cb){
     spIstek('POST',listeUrl()+'/items('+id+")/AttachmentFiles/getByFileName('"+encodeURIComponent(ad.replace(/'/g,"''"))+"')",null,{'X-HTTP-Method':'DELETE','IF-MATCH':'*'},cb);
   }
+  /* v2.2: Harita görseli Altyapı ekranının kütüphanesine yüklenir (VVIPAltyapiEkler/P<ProjeID>/HARITA-n.jpg).
+     Böylece Altyapı'daki harita paneli ve Word / Değerlendirme Raporu aynı görseli görür (en fazla 3). */
+  var EK_LIB='VVIPAltyapiEkler', HARITA_MAX=3;
+  function siteYolu(){ return TT_SITE.replace(/^https?:\/\/[^\/]+/i,''); }
+  function odq(x){ return String(x).replace(/'/g,"''"); }
+  function haritaKlasor(k){ return siteYolu()+'/'+EK_LIB+'/'+(k.pid?'P'+pidNorm(k.pid):'ITEM-'+k.id); }
+  function haritaYukle(k,blob,cb){
+    var yol=haritaKlasor(k), kl=TT_SITE+"/_api/web/GetFolderByServerRelativeUrl('"+odq(yol)+"')";
+    spGet(kl+'/Files?$select=Name').then(function(d){ return d.value||[]; },function(){ return null; }).then(function(L){
+      var dolu={}, slot=0, i;
+      (L||[]).forEach(function(f){ var m=/^HARITA(?:-([1-9]))?\.(jpe?g|png|gif)$/i.exec(f.Name||''); if(m) dolu[m[1]?+m[1]:1]=1; });
+      for(i=1;i<=HARITA_MAX;i++) if(!dolu[i]){ slot=i; break; }
+      if(!slot){ cb('Bu projede zaten '+HARITA_MAX+' harita görseli var — Altyapı ekranından birini değiştirin'); return; }
+      function yukle(){ spIstek('POST',kl+"/Files/add(url='HARITA-"+slot+".jpg',overwrite=false)",blob,{},function(e){ cb(e,'HARITA-'+slot+'.jpg',slot); }); }
+      if(L){ yukle(); return; }
+      spIstek('POST',TT_SITE+'/_api/web/folders',JSON.stringify({__metadata:{type:'SP.Folder'},ServerRelativeUrl:yol}),{'Content-Type':'application/json;odata=verbose','Accept':'application/json;odata=verbose'},function(e){
+        if(e&&!/409|exists|zaten/i.test(e)){ cb('Klasör oluşturulamadı — '+EK_LIB+' kütüphanesinde yetkiniz olmayabilir ('+e+')'); return; }
+        yukle();
+      });
+    });
+  }
   function bugunKod(){ var d=new Date(); function p(n){ return (n<10?'0':'')+n; } return d.getFullYear()+p(d.getMonth()+1)+p(d.getDate()); }
 
   /* Yapıştır / sürükle / dosya seç alanı. o={damla,dosya,sonuc,kayit:fn→{id,pid,ad,ekler}|null,eklendi:fn} */
@@ -2478,7 +3118,7 @@
       son.innerHTML='<div class="onizle"><img src="'+G.url+'" alt="Küçültülmüş görsel"><div style="flex:1;min-width:210px">'+
         '<b>'+boyut(G.bilgi.eski)+' → '+boyut(G.bilgi.yeni)+'</b> '+(yuzde?'<span class="etiket e-yesil">%'+yuzde+' küçük</span>':'<span class="etiket e-gri">zaten küçük</span>')+
         '<p class="alt" style="margin:3px 0 0">'+G.bilgi.w+' × '+G.bilgi.h+' px · JPG · '+esc(ad(k))+'</p>'+
-        '<div class="btns">'+(k&&k.id?'<button type="button" class="b-ana gEkle">📎 Kayda ekle (#'+k.id+')</button>':'')+'<button type="button" class="b-ikinci gIndir">⬇ İndir</button><button type="button" class="b-sade gSil">✖ Kaldır</button></div>'+
+        '<div class="btns">'+(k&&k.id?'<button type="button" class="b-ana gEkle">🗺️ Harita olarak ekle (#'+k.id+')</button>':'')+'<button type="button" class="b-ikinci gIndir">⬇ İndir</button><button type="button" class="b-sade gSil">✖ Kaldır</button></div>'+
         (o.kayit&&!(k&&k.id)?'<div class="bilgi">Kayda eklemek için bu projenin VIP Hafıza kaydı bulunmalı'+(canliMi()?'':' (önizlemede ek yüklenmez)')+'.</div>':'')+'</div></div>';
     }
     d.addEventListener('click',function(e){ var t=e.target; if(t&&/\bdosyaSec\b/.test(t.className||'')){ e.preventDefault(); inp.click(); return; } d.focus(); });
@@ -2500,11 +3140,12 @@
       if(/gEkle/.test(t.className)){
         var k=o.kayit&&o.kayit(); if(!k||!k.id) return;
         if(!canliMi()){ toast('Önizleme: TTPort\'ta kayda eklenir'); return; }
-        var dosya=ad(k); t.disabled=true; t.textContent='⏳ Yükleniyor…';
-        ekYukle(k.id,dosya,G.blob,function(er){
-          if(er){ t.disabled=false; t.textContent='📎 Kayda ekle'; toast('Eklenemedi: '+er); return; }
-          dghYaz({Title:k.ad||'',DegisilenAlan:'Ek',OncekiDeger:'',YeniDeger:dosya+' eklendi ('+boyut(G.blob.size)+', küçültülmüş)',DegistireN:kullanici(),KayitID:parseInt(k.id,10)||null},'Güncelleme');
-          toast('📎 '+dosya+' kayda eklendi ('+boyut(G.blob.size)+')');
+        t.disabled=true; t.textContent='⏳ Yükleniyor…';
+        haritaYukle(k,G.blob,function(er,dosya,slot){
+          if(er){ t.disabled=false; t.textContent='🗺️ Harita olarak ekle'; toast('Eklenemedi: '+er); return; }
+          dghYaz({Title:k.ad||'',DegisilenAlan:'Harita Görünümü '+slot,OncekiDeger:'',YeniDeger:dosya+' ('+boyut(G.blob.size)+', Talep ekranından)',DegistireN:kullanici(),KayitID:parseInt(k.id,10)||null},'Dosya Ekleme');
+          if(HF.haritalar){ var hk=k.pid?'P'+pidNorm(k.pid):'ITEM-'+k.id; HF.haritalar[hk]=(HF.haritalar[hk]||0)+1; }
+          toast('🗺️ Harita '+slot+' eklendi — Altyapı ekranında ve raporda görünür ('+boyut(G.blob.size)+')');
           G=null; ciz(); o.eklendi&&o.eklendi(dosya);
         });
       }
@@ -2581,7 +3222,7 @@
     var f=tkForm(), pid=TK.pid||f.projeId||'';
     var alt=[f.tur||'',f.hp?sy(f.hp)+' HP':'',f.toplam?para(f.toplam):'',f.hpBasi?'HP başı '+para(f.hpBasi):'',tkIl(f)].filter(function(x){ return x; }).join(' · ');
     var x=TK.kayit||{}, durum=
-      TK.durum==='araniyor'?'<span class="tm-durum">VIP Hafıza\'da aranıyor…</span>':
+      TK.durum==='araniyor'?'<span class="tm-durum">VIP Hafıza\'da araniyor…</span>':
       TK.durum==='bulundu'?'<span class="tm-durum kayitli">'+(x.Id?'Kayıt #'+x.Id+' · ':'Kayıtlı · ')+esc(x.OnayRed||'durum yok')+(x.Takipci?' · '+esc(x.Takipci):'')+'</span>':
       TK.durum==='yok'?'<span class="tm-durum yok">VIP Hafıza\'da kayıtlı değil</span>':
       TK.durum==='hata'?'<span class="tm-durum hata">VIP Hafıza\'ya ulaşılamadı</span>':'';
@@ -2595,7 +3236,7 @@
     var pid=TK.pid;
     if(!TK.ayiklandi){ el.innerHTML=''; return; }
     if(!pid){ el.innerHTML='<div class="bos-durum">Proje ID bulunamadı. "Bilgileri düzelt" bölümünden girin; kayıt kendiliğinden aranır.</div>'; tkGorsel.yenile(); return; }
-    if(TK.durum==='araniyor'){ el.innerHTML='<div class="bos-durum">'+esc(pid)+' VIP Hafıza\'da aranıyor…</div>'; return; }
+    if(TK.durum==='araniyor'){ el.innerHTML='<div class="bos-durum">'+esc(pid)+' VIP Hafıza\'da araniyor…</div>'; return; }
     if(TK.durum==='hata'){ el.innerHTML='<div class="tm-hf-ozet"><div class="metin">VIP Hafıza\'ya ulaşılamadı<small>'+esc(TK.hata)+'</small></div><button type="button" class="b-ikinci tkTekrar">↻ Tekrar dene</button></div>'; return; }
     var d=btDurum(pid), f=tkForm(), yapanInput=kullanici()?'':'<label class="tm-yapan" style="margin-top:10px">İşlemi yapan <input id="tkYapan" placeholder="Adınız (log için)"></label>';
     if(TK.durum==='yok'){
@@ -2826,7 +3467,9 @@
     if(var_(F.hiz)&&/BF/.test(tur)&&bosMu(v(F.hiz))) S.push(['s','BF: mevcut hız yok']);
     if(var_(F.adres)){ var ad=kirp(String(v(F.adres)||'').replace(/<[^>]+>/g,' ')); if(!ad) S.push(['k','Adres yok']); else if(!/\bno\s*:|\bno\b|\d+\s*\/\s*\d+|\d/i.test(ad)) S.push(['s','Adreste bina no yok']); }
     if(var_(F.asama)&&bosMu(v(F.asama))) S.push(['s','Talep yazısı (Aşama) yok']);
-    if(x.Attachments===false) S.push(['s','Harita / ek yok']);
+    var hk=HF.haritalar, pk=pidNorm(x.ProjeID);
+    if(hk){ if(!hk[pk?'P'+pk:'ITEM-'+x.Id]&&x.Attachments!==true) S.push(['s','Harita görseli yok']); }
+    else if(x.Attachments===false) S.push(['s','Harita / ek yok']);
     return S;
   }
   function raporListesi(kisi,kap){
@@ -2914,7 +3557,7 @@
   }
   function ekCiz(){
     var el=$('tkEkler');
-    if(EK.durum==='taraniyor'){ el.innerHTML='<div class="ilerle"><i id="tkEkIlerle"></i></div><div class="bilgi" id="tkEkSay">Taranıyor…</div>'; return; }
+    if(EK.durum==='taraniyor'){ el.innerHTML='<div class="ilerle"><i id="tkEkIlerle"></i></div><div class="bilgi" id="tkEkSay">Taraniyor…</div>'; return; }
     if(EK.durum!=='tamam'){ el.innerHTML=''; return; }
     var esik=EK_ESIK_KB*1024, B=EK.dosyalar.filter(function(f){ return f.boyut>=esik||f.durum; }).sort(function(a,b){ return b.boyut-a.boyut; });
     var bt=0; B.forEach(function(f){ if(!f.durum) bt+=f.boyut; });
@@ -2969,67 +3612,33 @@
     sonraki();
   }
 
-  /* ══════════ v2.1 ATAMA BİLDİRİMİ ══════════
-     Ön kayıt açılıp takipçi atanınca, her takipçiye kendi projelerini listeleyen TEK mail gider.
-     SharePoint'in kendi mail servisi kullanılır (SP.Utilities.Utility.SendEmail) → gönderen VIP Hafıza / TTPort adresidir.
-     Alıcı adresi: EKIP_MAIL ayarı; boşsa site kullanıcıları arasında adı tek eşleşen kişi aranır. */
-  var KULLANICILAR=null;
-  function siteKullanicilari(cb){
-    if(KULLANICILAR){ cb(KULLANICILAR); return; }
-    spGet(TT_SITE+'/_api/web/siteusers?$select=Title,Email&$top=5000').then(function(d){ KULLANICILAR=(d.value||[]).filter(function(u){ return u.Email; }); cb(KULLANICILAR); })
-      ['catch'](function(){ KULLANICILAR=[]; cb(KULLANICILAR); });
-  }
-  function mailBul(kisi,cb){
-    if(EKIP_MAIL[kisi]){ cb(EKIP_MAIL[kisi]); return; }
-    siteKullanicilari(function(L){
-      var w=' '+kucuk(kisi)+' ', M=L.filter(function(u){ return (' '+kucuk(u.Title).replace(/[^a-zçğıöşü]+/g,' ')+' ').indexOf(w)>-1; });
-      cb(M.length===1?M[0].Email:'');
-    });
-  }
-  function mailGonder(to,konu,html,cb){
-    digestAl(function(e){
-      if(e){ cb(e); return; }
-      fetch(TT_SITE+'/_api/SP.Utilities.Utility.SendEmail',{method:'POST',credentials:'include',
-        headers:{'Accept':'application/json;odata=verbose','Content-Type':'application/json;odata=verbose','X-RequestDigest':DIGEST},
-        body:JSON.stringify({properties:{__metadata:{type:'SP.Utilities.EmailProperties'},To:{results:[to]},Subject:konu,Body:html}})})
-      .then(function(r){ if(r.ok){ cb(null); return; } r.text().then(function(t){ cb('HTTP '+r.status+': '+spHata(t)); }); })
-      ['catch'](function(er){ cb(er.message||'bağlantı hatası'); });
-    });
-  }
-  function bildirimHtml(kisi,L,yapan){
-    var F='font-family:Calibri,Arial,sans-serif;font-size:11pt;color:#1F2A44', th='background:#0A1C46;color:#fff;padding:6px 12px;text-align:left;font-weight:bold', td='padding:5px 12px;border-bottom:1px solid #E3E7EF';
-    var h='<div style="'+F+'"><p>Merhaba '+esc(kisi)+',</p><p>VIP Hafıza\'da size <b>'+L.length+' yeni VVIP altyapı talebi</b> atandı'+(yapan?' ('+esc(yapan)+')':'')+'.</p>'+
-      '<table cellpadding="0" cellspacing="0" style="border-collapse:collapse;'+F+'"><tr><th style="'+th+'">Proje ID</th><th style="'+th+'">İl</th><th style="'+th+'">Kayıt</th><th style="'+th+';text-align:right">HP</th><th style="'+th+';text-align:right">Toplam maliyet</th></tr>';
-    L.forEach(function(x){
-      var link=x.id?kayitLinki(x.id):'';
-      h+='<tr><td style="'+td+'"><b>'+(link?'<a href="'+esc(link)+'" style="color:#1F55C9">'+esc(x.pid)+'</a>':esc(x.pid))+'</b></td><td style="'+td+'">'+esc(x.il||'')+'</td><td style="'+td+'">'+esc(x.ad||'')+'</td><td style="'+td+';text-align:right">'+sy(x.hp)+'</td><td style="'+td+';text-align:right">'+(x.toplam?esc(para(x.toplam)):'—')+'</td></tr>';
-    });
-    return h+'</table><p>Bölge cevabı geldiğinde maili Talep Metni Oluşturucu\'ya yapıştırıp künyeyi kayda tek tıkla yazabilirsiniz.</p><p style="color:#8A93A8;font-size:9pt">Bu mail VIP Hafıza tarafından otomatik gönderilmiştir.</p></div>';
-  }
-  /* liste: [{kisi,pid,il,ad,id,hp,toplam}] → cb({gonderilen,eksik,hata,kendi,onizleme}) */
-  function atamaBildir(liste,yapan,cb){
-    var s={gonderilen:[],eksik:[],hata:[],kendi:[],onizleme:!canliMi()};
-    var G={}, sira=[], ben=ekipEsle(yapan||kullanici());
-    (liste||[]).forEach(function(x){ if(EKIP.indexOf(x.kisi)<0) return; if(!G[x.kisi]){ G[x.kisi]=[]; sira.push(x.kisi); } G[x.kisi].push(x); });
-    if(!BILDIRIM_MAIL||!sira.length){ cb&&cb(s); return; }
-    if(s.onizleme){ s.gonderilen=sira.filter(function(k){ return k!==ben; }); s.kendi=sira.filter(function(k){ return k===ben; }); cb&&cb(s); return; }
-    var n=0;
-    (function sonraki(){
-      if(n>=sira.length){ cb&&cb(s); return; }
-      var kisi=sira[n++], L=G[kisi];
-      if(kisi===ben&&!KENDINE_DE){ s.kendi.push(kisi); sonraki(); return; }
-      mailBul(kisi,function(adr){
-        if(!adr){ s.eksik.push(kisi); sonraki(); return; }
-        mailGonder(adr,'VIP Hafıza · Size '+L.length+' yeni altyapı talebi atandı ('+L.map(function(x){ return x.pid; }).join(', ')+')',bildirimHtml(kisi,L,yapan),function(e){
-          if(e) s.hata.push(kisi+' ('+e+')'); else s.gonderilen.push(kisi); sonraki(); });
-      });
-    })();
+  /* ══════════ v2.2 ATAMA BİLDİRİMİ ══════════
+     Mail artık "Atama Bildirimi" bloğundan gider (bu sayfanın başında ve Altyapı Takip sayfasında aynı blok):
+     takipçi başına tek mail, her talebin eksik bilgileri listelenir, gönderim log'lanır (çift mail gitmez),
+     eksikler tamamlanmazsa hatırlatılır. Burada yalnızca motor hemen çalıştırılır; bildirim kapatıldıysa
+     o kayıtlar "atlandı" işaretlenir (sonra da gönderilmez). */
+  function atamaBildir(liste,yapan,cb,kapali){
+    var s={gonderilen:[],hata:[],kendi:[],onizleme:!canliMi(),kurulmamis:false,pasif:false,kapali:!!kapali};
+    var V=window.VHAtama, ids=(liste||[]).map(function(x){ return x.id; }).filter(function(x){ return x; });
+    if(s.onizleme){
+      if(kapali){ cb&&cb(s); return; }
+      var G={}, sira=[]; (liste||[]).forEach(function(x){ if(EKIP.indexOf(x.kisi)<0) return; if(!G[x.kisi]){ G[x.kisi]=0; sira.push(x.kisi); } G[x.kisi]++; });
+      s.gonderilen=sira.map(function(k){ return k+' ('+G[k]+' talep)'; }); cb&&cb(s); return;
+    }
+    if(!V){ s.hata.push('Atama Bildirimi bloğu bu sayfada yok'); cb&&cb(s); return; }
+    V.kontrol({hemen:true,atla:kapali?ids:[]}).then(function(o){
+      o=o||{}; s.kurulmamis=o.durum==='kurulmamis'; s.pasif=o.durum==='pasif';
+      (o.gonderilen||[]).forEach(function(g){ s.gonderilen.push(g.kisi+' ('+g.adet+(g.olay==='HAT'?' hatırlatma':' talep')+')'); });
+      s.hata=o.hata||[]; s.kendi=o.atlanan||[]; cb&&cb(s);
+    },function(e){ s.hata.push(e&&e.message||String(e)); cb&&cb(s); });
   }
   function bildirimMetni(s){
+    if(s.kapali) return 'Bu kayıtlar için atama maili gönderilmedi (kapattınız).';
+    if(s.kurulmamis) return 'Atama bildirimi henüz kurulmamış — yönetici: sol alttaki mavi nokta → Kur / Onar.';
+    if(s.pasif) return 'Atama bildirimi pasif — mail gönderilmedi.';
     var m=[];
-    if(s.gonderilen.length) m.push((s.onizleme?'Önizleme — TTPort\'ta şu kişilere bildirim maili gider: ':'📧 Bildirim gönderildi: ')+s.gonderilen.join(', ')+'.');
+    if(s.gonderilen.length) m.push((s.onizleme?'Önizleme — TTPort\'ta eksik bilgileri listeleyen atama maili gider: ':'📧 Atama maili gönderildi: ')+s.gonderilen.join(', ')+'.');
     if(s.kendi.length) m.push('Kendinize atadıklarınız için mail gönderilmedi.');
-    if(s.eksik.length) m.push('E-posta adresi bulunamadı: '+s.eksik.join(', ')+' (AYARLAR → EKIP_MAIL).');
     if(s.hata.length) m.push('Gönderilemedi: '+s.hata.join('; '));
     return m.join(' ');
   }
@@ -3539,8 +4148,40 @@
   function alanlar(cb){ if(ALAN){ cb(ALAN); return; } spGet(liste()+'/fields?$select=InternalName,EntityPropertyName,Title,TypeAsString&$top=500').then(function(d){ ALAN=d.value||[]; cb(ALAN); })['catch'](function(){ ALAN=[]; cb(ALAN); }); }
   function alanAd(re){ for(var i=0;i<(ALAN||[]).length;i++){ var f=ALAN[i]; if(re.test(sade(f.Title).replace(/ /g,''))||re.test(sade(f.InternalName).replace(/ /g,''))) return f.EntityPropertyName||f.InternalName; } return ''; }
 
-  /* ── Tek talep: "Toptan görüşü" kartı ── */
-  var K=null;
+  /* ── Tek talep: "Toptan görüşü" kartı ──
+     v2.2: Toptan'ın cevabı KARAR DEĞİLDİR. Onay / Red'e üst yönetim karar verir (Altyapı Takip → "Üst yönetime sun").
+     Bu kart görüşü proje proje okur ve yalnızca kayda NOT eder: Ticari değerlendirme alanı (listede varsa) +
+     değişiklik geçmişi. OnayRed ve Karar Tarihi'ne hiçbir koşulda dokunulmaz; kayıt Beklemede kalır. */
+  var K=null, GR=[], GR_NO=0;
+  var KESIN=/^(onay|kosul|ticari|butce)$/;
+  var PID_G=/\b([23]\d{6})\b/g;
+  function idler(s){ var L=[], m; PID_G.lastIndex=0; while((m=PID_G.exec(String(s||'')))) if(L.indexOf(m[1])<0) L.push(m[1]); return L; }
+  function mailProjeleri(){
+    var L=[], s=$('tmoProje'), i;
+    if(s&&s.options&&!/gizli/.test(($('tmoProjeKutu')||{}).className||'')) for(i=0;i<s.options.length;i++) L.push(String(s.options[i].value||s.options[i].text).replace(/\D/g,''));
+    var p=(($('tProjeId')||{}).value||'').replace(/\D/g,''); if(p&&L.indexOf(p)<0) L.push(p);
+    return L.filter(function(x){ return /^[23]\d{6}$/.test(x); });
+  }
+  /* Görüşü cümlelere böler; her cümlenin kararı içinde geçen Proje ID'lerine yazılır.
+     ID'siz cümle önceki ID'li cümleyi tamamlar ("2345678 için HP başı yüksek. Uygun görülmemiştir.").
+     Görüşte hiç ID yoksa mailin projelerine uygulanır ve kart bunu açıkça yazar. */
+  function projeGorusleri(k){
+    var cum=String(k.metin||'').match(/[^.!?;\n]+[.!?;]*/g)||[k.metin], G={}, sira=[], son=[];
+    cum.forEach(function(c){
+      c=kirp(c); if(!c) return;
+      var ids=idler(c), tur=siniflandir(c)||'not_';
+      if(ids.length){
+        son=ids;
+        ids.forEach(function(p){ if(!G[p]){ G[p]={pid:p,tur:tur,metin:c}; sira.push(p); } else if(!KESIN.test(G[p].tur)&&KESIN.test(tur)){ G[p].tur=tur; G[p].metin+=' '+c; } });
+      } else if(son.length&&KESIN.test(tur)){
+        son.forEach(function(p){ if(!KESIN.test(G[p].tur)){ G[p].tur=tur; G[p].metin+=' '+c; } });
+      }
+    });
+    if(sira.length) return sira.map(function(p){ var g=G[p]; g.etiket=KARAR_TUR[g.tur].etiket; g.renk=KARAR_TUR[g.tur].renk; g.sec=KESIN.test(g.tur); return g; });
+    var P=mailProjeleri();
+    return P.map(function(p){ return {pid:p,tur:k.tur,metin:k.metin,etiket:k.etiket,renk:k.renk,sec:KESIN.test(k.tur),genel:P.length>1}; });
+  }
+  var RENK={yesil:'e-yesil',kirmizi:'e-kirmizi',sari:'e-sari',mavi:'e-mavi',gri:'e-gri'};
   function kartHazirla(){
     var el=$('tmoToptanKart'); if(el) return el;
     var izg=document.querySelector('#tmoTek .izgara'); if(!izg) return null;
@@ -3548,60 +4189,93 @@
     var ilk=izg.querySelector('.kart'); izg.insertBefore(el,ilk?ilk.nextSibling:izg.firstChild);
     return el;
   }
-  var RENK={yesil:'e-yesil',kirmizi:'e-kirmizi',sari:'e-sari',mavi:'e-mavi',gri:'e-gri'};
+  function tdAlani(){ return alanAd(/^ticarideger/); }
   function kartCiz(){
     var el=kartHazirla(); if(!el) return;
     if(!K){ el.className='kart gizli'; return; }
-    var pid=(($('tProjeId')||{}).value||'').replace(/\D/g,'');
-    var kim=String(K.kimden||'').replace(/<.*$/,'');
-    var h='<div class="tm-karar"><div class="tm-karar-ust"><span class="etiket '+RENK[K.renk]+' buyuk">'+esc(K.etiket)+'</span><small>Toptan görüşü · '+esc(kim)+(K.tarih?' · '+esc(K.tarih):'')+'</small></div>'+
+    var kim=String(K.kimden||'').replace(/<.*$/,''), sec=GR.filter(function(g){ return g.sec&&g.kayit&&g.kayit.Id; }).length;
+    var h='<div class="tm-karar"><div class="kart-bas" style="margin-bottom:6px"><h3>Toptan görüşü</h3><span class="alt">'+esc(kim)+(K.tarih?' · '+esc(K.tarih):'')+'</span></div>'+
+      '<div class="tm-bilgi-not">ℹ️ Bu bir <b>karar değildir</b>. Onay / Red\'e üst yönetim karar verir. Burada yalnızca Toptan\'ın ticari görüşü kayda not edilir; kaydın durumu ve karar tarihi <b>değişmez</b>.</div>'+
       '<blockquote>“'+esc(K.metin)+'”</blockquote>'+
-      (K.enSonDegil?'<p class="alt">En son mesaj: “'+esc(K.enSonDegil.metin)+'” ('+esc(KARAR_TUR[K.enSonDegil.tur].etiket)+')</p>':'')+
       (K.gecmis.length>1?'<details class="tm-ac"><summary>Zincirdeki önceki görüşler ('+(K.gecmis.length-1)+')</summary><p class="alt">'+K.gecmis.filter(function(g){ return g.metin!==K.metin; }).map(function(g){ return '“'+esc(g.metin.length>90?g.metin.substring(0,90)+'…':g.metin)+'”'; }).join('<br>')+'</p></details>':'');
-    if(K.durum){
-      h+='<div class="tm-karar-aks"><label for="tgDurum">Kayda işlenecek karar<select id="tgDurum"><option value="">— değiştirme —</option><option'+(K.durum==='Onay'?' selected':'')+'>Onay</option><option'+(K.durum==='Red'?' selected':'')+'>Red</option></select></label>'+
-        '<button type="button" class="b-ana" id="tgIsle"'+(pid?'':' disabled')+'>Kayda işle'+(pid?' ('+pid+')':'')+'</button></div>'+
-        '<details class="tm-ac"><summary>Değişiklik geçmişine not</summary><input id="tgNot" value="'+esc('Toptan görüşü: '+K.metin.substring(0,150))+'"></details>'+
-        '<p class="ipucu">Karar görüşe göre otomatik seçildi; kontrol edin. Kayıtta yalnızca karar (ve varsa karar tarihi) değişir.'+(canli()?'':' Önizleme — kayda yazılmaz.')+'</p>';
-    }else h+='<p class="alt" style="margin:0">Bu görüşte kesin karar yok; kayıt değiştirilmez.</p>';
+    if(!GR.length) h+='<p class="alt" style="margin:8px 0 0">Görüşte proje numarası yok ve mailde proje bulunamadı — kayda not edilecek bir şey yok.</p>';
+    else{
+      if(GR[0].genel) h+='<p class="tm-uyari-sat">⚠️ Görüşte proje numarası geçmiyor; maildeki '+GR.length+' projenin hepsine aynı görüş uygulandı. Gerekirse işaretleri kaldırın.</p>';
+      h+='<div class="tm-gorus-liste">'+GR.map(function(g,i){
+        var x=g.kayit, durum=!canli()?'<span class="soluk">önizleme</span>':g.araniyor?'<span class="soluk">kayıt araniyor…</span>':!x?'<span class="etiket e-gri">VIP Hafıza\'da kayıt yok</span>':
+          '<span class="soluk">Kayıt #'+x.Id+' · '+esc(x.OnayRed||'durum yok')+'</span>';
+        var yazilabilir=!canli()||(x&&x.Id);
+        return '<label class="tm-gorus-sat'+(yazilabilir?'':' pasif')+'"><input type="checkbox" class="tgSec" data-i="'+i+'"'+(g.sec&&yazilabilir?' checked':'')+(yazilabilir?'':' disabled')+'>'+
+          '<b>'+esc(g.pid)+'</b><span class="etiket '+RENK[g.renk]+'">'+esc(g.etiket)+'</span>'+durum+
+          (GR.length>1&&!g.genel?'<small>“'+esc(g.metin.length>140?g.metin.substring(0,140)+'…':g.metin)+'”</small>':'')+'</label>';
+      }).join('')+'</div>';
+      var td=ALAN?tdAlani():'';
+      h+='<div class="tm-karar-aks"><button type="button" class="b-ana" id="tgIsle"'+(canli()&&!sec?' disabled':'')+'>Görüşü kayda not et'+(canli()?' ('+sec+')':'')+'</button>'+
+        '<span class="alt" style="margin:0">'+(td?'Yazılacak: Ticari değerlendirme + değişiklik geçmişi':'Yazılacak: yalnızca değişiklik geçmişi')+' · durum değişmez</span></div>'+
+        (canli()?'':'<p class="ipucu">Önizleme — TTPort dışında kayda yazılmaz.</p>');
+    }
     h+='</div>';
     el.innerHTML=h; el.className='kart tm-karar-kart';
-    var b=$('tgIsle'); if(b) b.addEventListener('click',function(ev){ ev.preventDefault(); isle(pid); });
   }
-  function isle(pid){
-    var d=$('tgDurum').value, not=kirp($('tgNot').value), b=$('tgIsle');
-    if(!d){ toast('Karar seçilmedi — kayıt değiştirilmedi'); return; }
-    if(!canli()){ toast('Önizleme: TTPort\'ta '+pid+' kaydı "'+d+'" yapılır'); return; }
-    if(!window.confirm(pid+' kaydının kararı "'+d+'" olarak işlensin mi?')) return;
-    b.disabled=true; b.textContent='İşleniyor…';
+  function kayitlariBul(){
+    if(!canli()||!GR.length) return;
+    var no=++GR_NO;
+    GR.forEach(function(g){ g.araniyor=true; });
     alanlar(function(){
-      spGet(liste()+'/items?$top=5&$select=Id,Title,OnayRed&$filter='+encodeURIComponent('ProjeID eq '+pid)).then(function(r){
-        var v=(r.value||[]).sort(function(a,b2){ return b2.Id-a.Id; });
-        if(!v.length){ b.disabled=false; b.textContent='Kayda işle'; toast(pid+' VIP Hafıza\'da bulunamadı — önce ön kayıt açın'); return; }
-        var x=v[0], p={OnayRed:d}, kt=alanAd(/^karartarihi$/), td=alanAd(/^ticarideger/);
-        if(kt) p[kt]=new Date().toISOString().slice(0,10)+'T09:00:00Z';
-        if(td) p[td]=K.etiket;
-        spYaz(liste()+'/items('+x.Id+')',p,true,function(e){
-          if(e){ b.disabled=false; b.textContent='Kayda işle'; toast('Yazılamadı: '+e); return; }
-          var yapan=''; try{ yapan=localStorage.getItem('at_user')||''; }catch(z){}
-          spYaz(TT_SITE+"/_api/web/lists/getbytitle('"+DGH_LIST+"')/items",{Title:x.Title||'',Aksiyon:'Durum Değişikliği',DegisilenAlan:'OnayRed',OncekiDeger:x.OnayRed||'',YeniDeger:(d+' · '+not).substring(0,255),DegistireN:yapan,KayitID:x.Id},false,function(){});
-          b.textContent='✓ İşlendi'; toast('✓ '+pid+' kaydı "'+d+'" olarak güncellendi');
-        });
-      })['catch'](function(e){ b.disabled=false; b.textContent='Kayda işle'; toast('VIP Hafıza okunamadı: '+e.message); });
+      GR.forEach(function(g){
+        spGet(liste()+'/items?$top=5&$select=Id,Title,OnayRed&$filter='+encodeURIComponent('ProjeID eq '+g.pid)).then(function(r){
+          var v=(r.value||[]).sort(function(a,b){ return b.Id-a.Id; }); g.kayit=v[0]||null;
+        })['catch'](function(){ g.kayit=null; }).then(function(){ g.araniyor=false; if(no===GR_NO) kartCiz(); });
+      });
     });
   }
+  function yapanAdi(){ var y=window.TMO_BEN&&window.TMO_BEN.ad||''; if(!y) try{ y=localStorage.getItem('at_user')||''; }catch(z){} return y; }
+  function isle(){
+    var L=GR.filter(function(g){ return g.sec; }), b=$('tgIsle');
+    if(!L.length){ toast('İşaretli proje yok'); return; }
+    if(!canli()){ toast('Önizleme: TTPort\'ta '+L.length+' kayda görüş not edilir (durum değişmez)'); return; }
+    L=L.filter(function(g){ return g.kayit&&g.kayit.Id; });
+    b.disabled=true; b.textContent='Yazılıyor…';
+    var td=tdAlani(), tamam=0, hata=[], n=0, tarih=new Date().toLocaleDateString('tr-TR');
+    (function sonraki(){
+      if(n>=L.length){
+        b.textContent=hata.length?'Tekrar dene':'✓ Not edildi'; b.disabled=!hata.length;
+        toast(hata.length?('Yazılamadı: '+hata.join('; ')):('✓ '+tamam+' kayda Toptan görüşü not edildi — durum değişmedi'));
+        return;
+      }
+      var g=L[n++], x=g.kayit, p={};
+      if(td) p[td]=g.etiket;
+      function logla(){
+        spYaz(TT_SITE+"/_api/web/lists/getbytitle('"+DGH_LIST+"')/items",{Title:x.Title||'',Aksiyon:'Toptan Görüşü',DegisilenAlan:'Toptan görüşü',OncekiDeger:'',
+          YeniDeger:(g.etiket+' · '+tarih+' · '+g.metin).substring(0,255),DegistireN:yapanAdi(),KayitID:x.Id},false,function(e){ if(e) hata.push(g.pid+' (geçmiş: '+e+')'); else tamam++; sonraki(); });
+      }
+      if(!td){ logla(); return; }
+      spYaz(liste()+'/items('+x.Id+')',p,true,function(e){ if(e){ hata.push(g.pid+': '+e); sonraki(); return; } logla(); });
+    })();
+  }
+  function gorusModu(acik){
+    var mk=$('tmoMetinKart'); if(!mk) return;
+    mk.className=acik?'kart gizli':'kart';
+    var l=$('tgMetinGoster'); if(l) l.parentNode.removeChild(l);
+    if(acik){ var el=$('tmoToptanKart'); if(!el) return; var a=document.createElement('button'); a.type='button'; a.className='b-link'; a.id='tgMetinGoster'; a.textContent='Talep metnini yine de göster';
+      a.addEventListener('click',function(ev){ ev.preventDefault(); gorusModu(false); }); el.appendChild(a); }
+  }
+  document.addEventListener('click',function(e){ var t=e.target; if(t&&t.id==='tgIsle'){ e.preventDefault(); isle(); } });
+  document.addEventListener('change',function(e){ var t=e.target; if(t&&/\btgSec\b/.test(t.className||'')){ var g=GR[+t.getAttribute('data-i')]; if(g){ g.sec=t.checked; kartCiz(); } } });
   var ay=$('tmoAyikla');
   if(ay) ay.addEventListener('click',function(){
     setTimeout(function(){
       var ham=($('tmoGiris')||{}).value||'';
       try{ K=kararBul(ham); }catch(e){ K=null; }
-      kartCiz();
+      GR=K?projeGorusleri(K):[]; kartCiz(); kayitlariBul();
+      var tip=[]; try{ tip=(M.ayikla(ham)||{}).tipler||[]; }catch(e){}
+      gorusModu(!!K&&tip.indexOf('Bölge künye cevabı')<0);
       var t=$('tmoTespit'), tur=[]; try{ tur=mailTuru(ham); }catch(e){}
       if(t&&tur.length) t.innerHTML=(t.innerHTML?t.innerHTML+'<br>':'')+'Mail türü: <b>'+esc(tur.join(' · '))+'</b>';
     },60);
   });
-  var tm=$('tmoTemizle'); if(tm) tm.addEventListener('click',function(){ K=null; kartCiz(); });
-  var tp=$('tProjeId'); if(tp) tp.addEventListener('change',function(){ if(K) kartCiz(); });
+  var tm=$('tmoTemizle'); if(tm) tm.addEventListener('click',function(){ K=null; GR=[]; GR_NO++; kartCiz(); gorusModu(false); });
+  var tp=$('tProjeId'); if(tp) tp.addEventListener('change',function(){ if(K&&!idler(K.metin).length){ GR=projeGorusleri(K); kartCiz(); kayitlariBul(); } });
 
 })(typeof window!=='undefined'?window:this);
 </script>
@@ -3635,7 +4309,7 @@
     var L=YONETICILER.map(katla);
     fetch('/gruplar/vip-hafiza/_api/web/currentuser',{credentials:'include',headers:{'Accept':'application/json;odata=nometadata'}})
       .then(function(r){ return r.json(); })
-      .then(function(d){ sinif('yonetici',L.indexOf(katla(d.Email))>-1||L.indexOf(katla(d.Title))>-1); })
+      .then(function(d){ window.TMO_BEN={ad:d.Title||'',mail:d.Email||''}; sinif('yonetici',L.indexOf(katla(d.Email))>-1||L.indexOf(katla(d.Title))>-1); })
       ['catch'](function(){});
   }
 
