@@ -287,6 +287,29 @@
       .then(function () { return { id: mevcut.id }; }, function () { return null; });   // 412 = başkası aldı
   }
 
+  /* Kişi kilidi: iki tarayıcı aynı anda çalışırsa bir kişinin talepleri iki maile bölünmesin.
+     "KILIT|ATA|Fırat" satırını ilk yazan o kişinin tüm taleplerini gönderir, diğeri o kişiyi bu turda atlar. */
+  function kisiKilidi(olay, kisi) {
+    var k = 'KILIT|' + olay + '|' + kisi.ad, f = '/items?$select=Id,Modified&$orderby=Id&$filter=' + encodeURIComponent("Title eq '" + k + "'");
+    function al(tekrar) {
+      var benimId = null;
+      return logEkle({ Title: k, Olay: 'KILIT', Kisi: kisi.ad, Durum: 'Kilit', Tetikleyen: _ben ? _ben.ad : '' })
+        .then(function (d) { benimId = d.Id; return spGet(listeUrl(CFG.LOG_LISTE) + f); })
+        .then(function (d) {
+          if (d.results.length && d.results[0].Id !== benimId) return logSil(benimId).then(function () { return null; }, function () { return null; });
+          return benimId;
+        }, function () {
+          if (tekrar) return null;                               // satır zaten var: başkası gönderiyor ya da takılı kalmış
+          return spGet(listeUrl(CFG.LOG_LISTE) + f).then(function (d) {
+            var x = d.results[0], m = x && tarihOku(x.Modified);
+            if (!x || (m && (Date.now() - m.getTime()) / 60000 < CFG.KILIT_ZAMAN_ASIMI_DK)) return null;
+            return logSil(x.Id).then(function () { return al(true); });   // zaman aşımına uğramış kilidi devral
+          })['catch'](function () { return null; });
+        });
+    }
+    return al(false);
+  }
+
   /* ============================ MAİL ============================ */
   var F = "font-family:'Segoe UI',Arial,Helvetica,sans-serif;";
   function kayitLinki(id, ayar) {
@@ -353,6 +376,13 @@
 
   /* ============================ GÖNDERİM (kişi başına tek mail) ============================ */
   function grupIsle(olay, kisi, L, loglar, ayar, ozet) {
+    return kisiKilidi(olay, kisi).then(function (kid) {
+      if (!kid) return;                                          // bu kişiyi şu an başka bir tarayıcı gönderiyor
+      return grupGonder(olay, kisi, L, loglar, ayar, ozet).then(function () { return logSil(kid)['catch'](function () {}); },
+        function (e) { return logSil(kid)['catch'](function () {}).then(function () { throw e; }); });
+    });
+  }
+  function grupGonder(olay, kisi, L, loglar, ayar, ozet) {
     var kilitli = [], i = 0;
     function kilitSirada() {
       if (i >= L.length) return Promise.resolve();
