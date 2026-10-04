@@ -36,6 +36,8 @@ Ayarlar `altyapi_atama_bildirimi.html` → `CFG` içindedir. Talep ekranındaki 
 - Gönderimi sayfayı açık tutan herhangi bir ekip üyesinin tarayıcısı yapar. Log ve kilit sayesinde aynı mail iki kez gitmez.
 - Maildeki Proje ID'ye tıklanınca Altyapı Takip `?kayit=<Id>` adresiyle açılır ve o kaydın formu kendiliğinden gelir.
 - Üst yönetime sunulmuş kayıtlar (`Üst Yönetime Sunuldu - Bekliyor`) bildirilmez.
+- **Tamamla** (Talep ekranı → İşlerim / Yönetim) ve maildeki Proje ID bağlantısı Altyapı Takip'te kaydı açar. Tamamlanması gereken alanlar kırmızı daire (!) ve kırmızı çerçeveyle işaretlenir; formun üstünde eksiklerin listesi çıkar. Bir alan doldurulunca o alanın işareti kalkar.
+- Altyapı sayfasının adresini blok kendisi öğrenir: blok Altyapı sayfasında bir kez çalıştıktan sonra Tamamla düğmeleri oraya gider. O zamana kadar SharePoint formu açılır. Beklemek istemezseniz Talep ekranındaki `ALTYAPI_SAYFA` ayarına sayfanın tam `.aspx` adresini yazın.
 
 ## Toptan görüşü (değişti)
 

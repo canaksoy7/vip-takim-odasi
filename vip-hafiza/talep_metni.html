@@ -139,6 +139,14 @@
 #vab-pnl .log{margin-top:8px;max-height:220px;overflow:auto;border-top:1px solid #EEF1F6;padding-top:6px}
 #vab-pnl .li{font-size:11px;padding:3px 0;color:#3C4660;display:flex;gap:6px;flex-wrap:wrap}
 #vab-pnl .ok{color:#11815A}#vab-pnl .er{color:#C2352C}#vab-pnl .wr{color:#A85F00}
+/* Altyapı formu: tamamlanması gereken alanlar (?kayit=…) */
+.vab-eksik .finp,textarea.vab-eksik{border-color:#C2352C !important;box-shadow:0 0 0 3px rgba(194,53,44,.16) !important}
+.vab-eksik .or-seg,.vab-eksik .ek-box{box-shadow:0 0 0 2px #C2352C;border-radius:12px}
+.vab-nokta{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:#C2352C;color:#fff !important;font:800 12px/1 "Segoe UI",Arial,sans-serif;margin-right:6px;vertical-align:-3px;flex-shrink:0}
+.vab-eksik-not{display:flex;align-items:center;gap:2px;margin-top:6px;color:#C2352C;font:600 12px "Segoe UI",Arial,sans-serif}
+#vab-bant{margin:0 0 14px;padding:11px 14px;border-radius:12px;background:#FCEAE8;border:1px solid #F2C4BF;color:#8E2219;font:13px/1.5 "Segoe UI",Arial,sans-serif}
+#vab-bant b{color:#C2352C}
+#vab-bant button{border:0;background:#fff;color:#C2352C;border-radius:99px;padding:2px 10px;margin:4px 4px 0 0;font:600 12px "Segoe UI",Arial,sans-serif;cursor:pointer;box-shadow:inset 0 0 0 1px #F2C4BF}
 </style>
 <div id="vab-dot" title="Atama Bildirimi"></div>
 <div id="vab-pnl">
@@ -659,15 +667,80 @@
     });
   }
 
-  /* ============================ ALTYAPI SAYFASI: ?kayit=<Id> ============================ */
-  /* Maildeki bağlantı Altyapı Takip'i ?kayit=123 ile açar → kayıtlar yüklenince formu açar */
+  /* ============================ ALTYAPI SAYFASI: ?kayit=<Id>[&eksik=…] ============================ */
+  /* Mail ve Talep ekranındaki "Tamamla" bağlantısı Altyapı Takip'i ?kayit=123 ile açar → kaydın formu açılır,
+     tamamlanması gereken alanlar kırmızı daire + kırmızı çerçeveyle işaretlenir, üstte liste çıkar.
+     &eksik=adres~Adreste bina no yok;fiber~… gelirse o liste, gelmezse eksikler burada hesaplanır. */
+  var FORM_ALAN = {
+    tur: 'fProjeTuru', pid: 'fProjeId', hp: 'fHp', mal: 'fMaliyet', fiber: 'fFiberMesafe', adres: 'fAdres', dsl: 'fCalisanDsl',
+    hiz: 'fMevcutHiz', asama: 'fAsama', harita: 'ekFormAlan', takipci: 'fTakipci', butce: 'fButce', sehir: 'fSehir'
+  };
+  var ETIKET_ANAHTAR = { 'Proje Türü (BF/GF)': 'tur', 'Proje ID': 'pid', 'HP': 'hp', 'Toplam Maliyet': 'mal', 'Fiber Mesafesi': 'fiber', 'Adres': 'adres',
+    'Çalışan DSL Sayısı': 'dsl', 'Mevcut Hız': 'hiz', 'Talep yazısı (Aşama)': 'asama', 'Harita görseli': 'harita' };
+  function isaretleriTemizle() {
+    var L = document.querySelectorAll('.vab-eksik'), i, n;
+    for (i = 0; i < L.length; i++) L[i].className = L[i].className.replace(/\s*\bvab-eksik\b/g, '');
+    n = document.querySelectorAll('.vab-eksik-not, .vab-nokta, #vab-bant');
+    for (i = 0; i < n.length; i++) if (n[i].parentNode) n[i].parentNode.removeChild(n[i]);
+  }
+  function alanKutusu(k) {
+    var el = E(FORM_ALAN[k]); if (!el) return null;
+    return (k === 'asama' || k === 'harita') ? el : el.parentNode;
+  }
+  function etiketi(k, kutu) {
+    var el = E(FORM_ALAN[k]);
+    return document.querySelector('label[for="' + FORM_ALAN[k] + '"]') || (kutu && kutu.querySelector('label')) || (el && el.previousElementSibling && el.previousElementSibling.tagName === 'LABEL' ? el.previousElementSibling : null);
+  }
+  function isaretle(L) {
+    isaretleriTemizle();
+    var ilk = null, goster = [];
+    L.forEach(function (z) {
+      var kutu = alanKutusu(z.k); if (!kutu) return;
+      kutu.className += ' vab-eksik';
+      var lb = etiketi(z.k, kutu);
+      if (lb) { var d = document.createElement('span'); d.className = 'vab-nokta'; d.textContent = '!'; d.title = z.msg; lb.insertBefore(d, lb.firstChild); }
+      var not = document.createElement('div'); not.className = 'vab-eksik-not'; not.textContent = z.msg + ' — düzenlenmesi gerekiyor';
+      if (z.k === 'asama') kutu.parentNode.insertBefore(not, kutu.nextSibling); else kutu.appendChild(not);
+      function bitti() { kutu.className = kutu.className.replace(/\s*\bvab-eksik\b/g, ''); if (not.parentNode) not.parentNode.removeChild(not); if (lb && lb.firstChild && lb.firstChild.className === 'vab-nokta') lb.removeChild(lb.firstChild); }
+      if (z.k !== 'harita') { kutu.addEventListener('input', bitti); kutu.addEventListener('change', bitti); if (z.k === 'tur') kutu.addEventListener('click', function (e) { if (e.target && e.target.closest && e.target.closest('button')) bitti(); }); }
+      goster.push(z); if (!ilk) ilk = kutu;
+    });
+    if (!goster.length) return;
+    var kart = document.querySelector('#pg-form .form-card'), hd = kart && kart.querySelector('.form-hd');
+    if (kart) {
+      var b = document.createElement('div'); b.id = 'vab-bant';
+      b.innerHTML = '<b>⚠ Bu talepte ' + goster.length + ' alan tamamlanmalı.</b> Kırmızı işaretli alanları doldurup <b>Kaydet</b>\'e basın.<br>' +
+        goster.map(function (z) { return '<button type="button" data-k="' + z.k + '">' + esc(z.msg) + '</button>'; }).join('');
+      b.addEventListener('click', function (e) { var k = e.target && e.target.getAttribute && e.target.getAttribute('data-k'); if (!k) return; e.preventDefault(); var x = alanKutusu(k); if (x && x.scrollIntoView) x.scrollIntoView({ behavior: 'smooth', block: 'center' }); var f = E(FORM_ALAN[k]); if (f && f.focus && f.type !== 'hidden') setTimeout(function () { f.focus(); }, 300); });
+      kart.insertBefore(b, hd ? hd.nextSibling : kart.firstChild);
+    }
+    if (ilk && ilk.scrollIntoView) setTimeout(function () { ilk.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 150);
+  }
+  function eksikParam() {
+    var m = /[?&]eksik=([^&#]*)/.exec(location.search || ''); if (!m) return null;
+    return decodeURIComponent(m[1].replace(/\+/g, ' ')).split(';').map(function (x) { var p = x.split('~'); return { k: kirp(p[0]), msg: kirp(p[1] || p[0]) }; })
+      .filter(function (z) { return FORM_ALAN[z.k]; });
+  }
   function kayitBaglantisi() {
     var m = /[?&]kayit=(\d+)/.exec(location.search || ''); if (!m) return;
     var id = parseInt(m[1], 10), n = 0;
     (function bekle() {
       if (altyapiSayfasiMi() && window.ALL && window.ALL.length) {
         var rec = window.findById(id);
-        if (rec) window.goForm(rec); else if (typeof window.toast === 'function') window.toast('Kayıt #' + id + ' listede bulunamadı', 'err');
+        if (!rec) { if (typeof window.toast === 'function') window.toast('Kayıt #' + id + ' ekranda yüklü kayıtlar arasında yok', 'err'); return; }
+        var eski = window.goForm;   // başka bir kayıt açılınca işaretler kalksın
+        if (!eski.__vab) { window.goForm = function () { isaretleriTemizle(); return eski.apply(this, arguments); }; window.goForm.__vab = true; }
+        window.goForm(rec);
+        var L = eksikParam();
+        if (L) { setTimeout(function () { isaretle(L); }, 300); return; }
+        L = eksikler(rec, null).map(function (ad) { return { k: ETIKET_ANAHTAR[ad], msg: ad + ' eksik' }; }).filter(function (z) { return z.k; });
+        if (typeof window.ekListFiles === 'function' && kirp(rec.OnayRed) !== 'Onay') {
+          window.ekListFiles(rec, function (e, list) {
+            var var_ = (list || []).some(function (f) { return /^HARITA/i.test(f.Name || ''); });
+            if (!var_) L.push({ k: 'harita', msg: 'Harita görseli eksik' });
+            setTimeout(function () { isaretle(L); }, 300);
+          });
+        } else setTimeout(function () { isaretle(L); }, 300);
         return;
       }
       if (++n < 60) setTimeout(bekle, 500);
@@ -3482,10 +3555,10 @@
     if(!E.length){ el.innerHTML='<div class="bos-durum">🎉 Açık kayıtlarda eksik bilgi yok.</div>'; return; }
     var L=TKP.eksikTum?E:E.slice(0,8);
     el.innerHTML='<div class="tm-liste-sade">'+L.map(function(z){
-      var x=z.x, link=kayitLinki(x.Id,true);
+      var x=z.x, link=altyapiLinki(x.Id,z.sorun);
       return '<div class="tm-is"><span class="tm-gun '+(z.kir?'e-kirmizi':'e-sari')+'">'+z.sorun.length+'<small>eksik</small></span>'+
         '<div class="tm-is-govde"><b>'+esc(pidNorm(x.ProjeID)||'—')+'</b> <span class="soluk">'+esc(x.Title||'')+(x.Takipci&&!$('tkKisi').value?' · '+esc(x.Takipci):'')+'</span><small>'+z.sorun.map(function(s){ return esc(s[1]); }).join(' · ')+'</small></div>'+
-        '<div class="tm-is-aks">'+(link?'<a class="b-ikinci mini tm-btnlink" href="'+esc(link)+'" target="_blank" rel="noopener">Tamamla ↗</a>':'')+'</div></div>';
+        '<div class="tm-is-aks">'+(link?'<a class="b-ikinci mini tm-btnlink" href="'+esc(link)+'" target="_blank" rel="noopener" title="'+(window.TMO_ALTYAPI_URL?'Altyapı Takip ekranında açılır; eksik alanlar kırmızı işaretli gelir':'Altyapı ekranının adresi henüz bilinmiyor — SharePoint formu açılır (ayarlar: ALTYAPI_SAYFA)')+'">Tamamla ↗</a>':'')+'</div></div>';
     }).join('')+'</div>'+(E.length>L.length?'<button type="button" class="b-link" id="tkEksikTum">Tümünü göster ('+E.length+')</button>':'');
   }
   function hatirlatmaAc(gi){
@@ -3548,12 +3621,24 @@
     if(/GF/.test(tur)&&dsl>0) S.push(['s','GF ama çalışan DSL '+sy(dsl)]);
     if(var_(F.fiber)&&bosMu(v(F.fiber))) S.push(['s','Fiber mesafesi yok']);
     if(var_(F.hiz)&&/BF/.test(tur)&&bosMu(v(F.hiz))) S.push(['s','BF: mevcut hız yok']);
-    if(var_(F.adres)){ var ad=kirp(String(v(F.adres)||'').replace(/<[^>]+>/g,' ')); if(!ad) S.push(['k','Adres yok']); else if(!/\bno\s*:|\bno\b|\d+\s*\/\s*\d+|\d/i.test(ad)) S.push(['s','Adreste bina no yok']); }
+    if(var_(F.adres)){ var ad=kirp(String(v(F.adres)||'').replace(/<[^>]+>/g,' ')); if(!ad) S.push(['k','Adres yok']); else if(!/\bno\s*:|\bno\b|\d+\s*\/\s*\d+|\d/i.test(ad)) S.push(['s','Adreste bina no yok (adreste hiç numara geçmiyor: "'+(ad.length>45?ad.substring(0,45)+'…':ad)+'")']); }
     if(var_(F.asama)&&bosMu(v(F.asama))) S.push(['s','Talep yazısı (Aşama) yok']);
     var hk=HF.haritalar, pk=pidNorm(x.ProjeID);
     if(hk){ if(!hk[pk?'P'+pk:'ITEM-'+x.Id]&&x.Attachments!==true) S.push(['s','Harita görseli yok']); }
     else if(x.Attachments===false) S.push(['s','Harita / ek yok']);
+    S.forEach(function(z){ z[2]=sorunAlani(z[1]); });   // v2.2: Altyapı formunda hangi alan kırmızı işaretlenecek
     return S;
+  }
+  function sorunAlani(m){
+    return /takip/i.test(m)?'takipci':/bütçe/i.test(m)?'butce':/^proje türü|^GF ama/i.test(m)?'tur':/^HP yok/.test(m)?'hp':/maliyet|HP başı/i.test(m)?'mal':
+      /DSL/.test(m)?'dsl':/fiber/i.test(m)?'fiber':/hız/i.test(m)?'hiz':/adres/i.test(m)?'adres':/aşama|talep yazısı/i.test(m)?'asama':/harita/i.test(m)?'harita':'';
+  }
+  /* v2.2: "Tamamla" → Altyapı Takip ekranında bu kayıt açılır, eksik alanlar kırmızı işaretli gelir */
+  function altyapiLinki(id,sorun){
+    var u=window.TMO_ALTYAPI_URL||'';
+    if(!u||!id) return kayitLinki(id,true);
+    var e=(sorun||[]).filter(function(z){ return z[2]; }).map(function(z){ return z[2]+'~'+String(z[1]).replace(/[~;]/g,' ').substring(0,90); }).join(';');
+    return u+(u.indexOf('?')>-1?'&':'?')+'kayit='+id+(e?'&eksik='+encodeURIComponent(e):'');
   }
   function raporListesi(kisi,kap){
     if(!HF.items.length||!ALANLAR) return [];
@@ -3577,7 +3662,7 @@
     if(!L.length){ el.innerHTML=h+'<div class="bos-durum">'+(R.length?'🎉 Tüm kayıtlar rapora hazır görünüyor.':'Bu kapsamda kayıt yok.')+'</div>'; return; }
     h+='<div class="tablo-kap"><table class="tp-tablo"><tr><th>Proje</th><th>Kayıt · takipçi</th><th>Eksik / tutarsız</th><th></th></tr>';
     L.slice(0,150).forEach(function(z){
-      var x=z.x, link=kayitLinki(x.Id,true);
+      var x=z.x, link=altyapiLinki(x.Id,z.sorun);
       h+='<tr><td><b>'+esc(pidNorm(x.ProjeID)||'—')+'</b><p class="alt">'+tarihYaz(x.Created)+'</p></td><td>'+esc(x.Title||'')+'<p class="alt">'+esc(x.Takipci||'takipçi yok')+' · '+esc(x.OnayRed||'durum yok')+'</p></td>'+
         '<td>'+(z.sorun.length?z.sorun.map(function(s){ return '<span class="etiket '+(s[0]==='k'?'e-kirmizi':'e-sari')+'">'+esc(s[1])+'</span>'; }).join(''):'<span class="etiket e-yesil">✓ hazır</span>')+'</td>'+
         '<td>'+(link?'<a class="etiket e-mavi" href="'+esc(link)+'" target="_blank" rel="noopener">düzenle ↗</a>':'')+'</td></tr>';
@@ -4378,7 +4463,8 @@
 
   /* ⚙️ AYARLAR */
   var YONETICILER=['mehmetcan.aksoy@turktelekom.com.tr','Mehmet Can Aksoy','Tarık Bektaş'];   // e-posta ya da görünen ad — Yönetim sekmesini yalnızca bunlar görür
-  var ALTYAPI_SAYFA='https://ttport.turktelekom.com.tr/gruplar/vip-hafiza';                    // "Altyapı Takip ↗" bağlantısı — Altyapı sayfasının tam adresini yazın
+  var ALTYAPI_SAYFA='https://ttport.turktelekom.com.tr/gruplar/vip-hafiza';   // "Altyapı Takip ↗" ve "Tamamla" bağlantısı. Altyapı sayfasının tam .aspx adresini yazabilirsiniz;
+                                                                              // yazmazsanız Atama Bildirimi bloğu Altyapı sayfasında ilk çalıştığında adresi kendisi öğrenir
 
   function $(id){ return document.getElementById(id); }
   var kok=$('tmo'); if(!kok) return;
@@ -4392,7 +4478,8 @@
   /* Altyapı bağlantısı */
   var l=$('tmoAltyapiLink'); if(l){ if(ALTYAPI_SAYFA) l.href=ALTYAPI_SAYFA; else l.style.display='none'; }
   /* v2.2: Atama Bildirimi Altyapı sayfasının adresini öğrendiyse bağlantı oraya gider */
-  if(l&&canliMi()&&window.VHAtama) window.VHAtama.durum().then(function(a){ if(a&&a.altyapiUrl&&!/\.aspx/i.test(ALTYAPI_SAYFA||'')) l.href=a.altyapiUrl; },function(){});
+  if(/\.aspx/i.test(ALTYAPI_SAYFA||'')) window.TMO_ALTYAPI_URL=ALTYAPI_SAYFA;
+  else if(canliMi()&&window.VHAtama) window.VHAtama.durum().then(function(a){ if(a&&a.altyapiUrl){ window.TMO_ALTYAPI_URL=a.altyapiUrl; if(l) l.href=a.altyapiUrl; } },function(){});
 
   /* Yönetici görünümü: TTPort'ta oturumdaki kişiye göre; önizlemede açık (?ekip=1 ile ekip görünümü) */
   if(!canliMi()) sinif('yonetici',!/[?&]ekip=1/.test(location.search||''));
