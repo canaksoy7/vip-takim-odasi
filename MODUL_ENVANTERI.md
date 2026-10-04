@@ -1,9 +1,9 @@
 # VIP Hafıza — Modül Envanteri (Aşama 1)
 
-> Durum: **Aşama 1 taslağı — onay bekliyor.**
-> Bu belge yalnızca liste şemalarından (`Listeler/*/*_sema.xml.txt`) ve görev tanımındaki kurallardan üretildi.
-> **`Kodlar/` klasörü yüklenen arşivde yok**, bu yüzden sayfa kodlarından çıkarılması gereken bilgiler
-> (ekran yerleşimi, buton davranışları, koddaki kural farkları, `getbytitle(...)` çağrıları) henüz doğrulanamadı.
+> Durum: **Son hal (Aşama 6).** Prototip `app/` klasöründe; çalıştırma için `app/README.md`.
+> Bu belge liste şemalarından (`Listeler/*/*_sema.xml.txt`) ve görev tanımındaki kurallardan üretildi.
+> Ayrı bir `Kodlar/` klasörü yok; kullanıcı, kaynak olarak bu şema dosyalarının esas alınmasını onayladı.
+> Bu yüzden sayfa kodundaki olası kural farkları karşılaştırılamadı; 📝 işaretli kurallar görev tanımından uygulandı.
 
 ## 0. Kaynak ve işaretler
 
@@ -255,7 +255,20 @@ Tüm tablolarda ortak: `ID` (number, artan), `Title` (text), `Created`, `Modifie
 5. Uzun formlar 2–3 adım; tarih alanları yerel tarih seçici.
 6. Tablolar mobilde kart; masaüstünde tablo görünümü.
 
-## 8. Açık sorular (onayınız için)
+## 8. Açık sorular ve alınan kararlar
+
+Kullanıcı "devam et" dedi; aşağıdaki sorular önerilen varsayımlarla kapatıldı:
+
+| # | Karar |
+|---|---|
+| 1 | Ayrı kod yok; şemalar + görev tanımı esas alındı. |
+| 2 | VIP talep ana listesi görev tanımındaki alanlarla modellendi (`vip_talep`). |
+| 3 | `BakanHatlari` = VVIP Taahhüt ana listesi (ekran adı "VVIP Taahhütler"). |
+| 4 | Prototipe `Kaynak` (VVIP/Toptan) ve `ToptanaBildirildi` alanları eklendi. |
+| 5 | "Alan Bazlı" → çalışan DSL ya da mevcut altyapı varsa BF, yoksa GF. Alarm eşikleri 30/15/7 gün. "Geciken" filtresi 7+ gün. |
+| 6 | Prototip `app/` klasöründe; depodaki `index.html` değiştirilmedi. |
+
+İlk sorular (kayıt için):
 1. **`Kodlar/` klasörü** arşivde yok. Gönderebilir misiniz (tercihen `.xlsx` içermeyen bir zip)? Gönderemezseniz prototipi bu envanter + görev tanımı üzerinden kurarım; koddaki kural farkları yakalanamaz.
 2. **VIP Talep Takip ana listesi** (RequestSubject/Subject alanlı) şeması yok. Şeması var mı, yoksa görev tanımındaki alanlarla mı modelleyelim?
 3. **`BakanHatlari` = VVIP Taahhüt ana listesi** varsayımı doğru mu?
@@ -265,5 +278,81 @@ Tüm tablolarda ortak: `ID` (number, artan), `Title` (text), `Created`, `Modifie
 
 ---
 
-## 9. SharePoint ↔ prototip farkları ve canlı geçiş uç noktaları
-*(Aşama 6'da doldurulacak.)*
+
+
+## 9. SharePoint ↔ prototip farkları ve canlıya geçiş uç noktaları
+
+### 9.1 Genel farklar
+
+| Konu | SharePoint (TTPort) | Prototip |
+|---|---|---|
+| Veri | SharePoint listeleri, REST (`odata=verbose`) | IndexedDB (Dexie), tek `repository` katmanı; demo verisi uydurma |
+| Navigasyon | Her sayfada ayrı sağ menü | Tek merkezi navigasyon: alt dock (rol bazlı 4 modül + Tümü), "Tümü" ekranı, genel arama |
+| Kimlik / yetki | SharePoint kullanıcıları ve grupları | Demo rol seçici (Ekip Üyesi / Yönetici / ÖHE Ekibi) |
+| E-posta | Gerçek gönderim + log listeleri (çift gönderim kilidi) | Gönderim yok; Bildirim Kutusu'nda önizleme. Kilit `bildirim_kilit` tablosunda |
+| "Günün ilk açanı tetikler" | Sayfa betiği | Uygulama o gün ilk açıldığında çalışır; Ayarlar'da "yeniden çalıştır (demo)" düğmesi |
+| Seçenek değerleri | `"1. Onay"` gibi numaralı metin | Aynı metin saklanır, ekranda numara gizlenir |
+| Değişiklik geçmişi | `VVIPDegisiklikGecmisi`, `VVIPTaahhutDegisiklikGecmisi` | Tek `gecmis` tablosu (`Liste` alanıyla ayrışır); repository her `update`'te değişen alanı yazar |
+| Ekler | `VVIPAltyapiEkler` belge kitaplığı | Uygulama içinde üretilen SVG harita + cihazdan eklenen görsel (data URL) |
+| Çevrimdışı | Yok (VPN gerekli) | PWA, tam çevrimdışı. Ayrıca tek dosya `VIP_Hafiza_Demo.html` (sunucusuz) |
+
+### 9.2 Modül bazlı farklar
+
+| Modül | Prototipte farklı olan |
+|---|---|
+| VVIP Altyapı Takip | `Kaynak` (VVIP/Toptan), `ToptanaBildirildi`, `Ilce` alanları eklendi. "Geciken" = karar bekleyen ve 7+ gün. Üst yönetime sunma, zorunlu alan eksikse engellenir ve "eksik bilgi" bildirimi üretir. Word raporu `docx` ile cihazda üretilir. |
+| Talep Metni Oluşturucu | "Anahtar: Değer" satırları ve sekmeli başlık+değer tablosu desteklenir. Künye tek dokunuşla yeni altyapı kaydına dönüşür. |
+| Altyapı Masası | Altyapı Takip ile aynı tabloyu kullanır; ayrı liste yok. |
+| VVIP Taahhütler | `BakanHatlari` şemasıyla. Çakışma = aynı numarada örtüşen tarih aralığı. Numara maskeli; görmek için erişim onayı gerekir. |
+| Taahhüt Alarmı | Eşikler 30/15/7 gün. Her `(kayıt, eşik)` çifti için tek bildirim. |
+| Üst Yönetim Hatları | Görünürlük süresi 15 dk. Maskeli CSV her zaman alınabilir; tam numaralı CSV ayrı onay ister. Her işlem `erisim_log`'a yazılır. |
+| Ek İndirim Hesaplama | Liste yok; saf hesaplayıcı. |
+| Yönetici Panosu | Altyapı onayı, erişim talepleri ve malzeme kayıt onayları tek ekranda. |
+| VIP Talep Takip | Ana liste şeması olmadığı için alanlar görev tanımından alındı. Takipçi `vip_meta`'da; notlar `vip_log`'da. Hatırlatma `HatirlatmaKilit` ile günde bir kez. |
+| ÖHE Bütçe & Stok | Malzeme kaydında `OnayDurumu` (prototip eki). Excel aktarım `SheetJS` ile yalnızca cihazda; örnek şablon uygulama içinde üretilir. `OHE_Master` kullanılmadı. |
+| KADES | `Tur` = KADES / Ürün Kodu; ürün kodu `IlgiliKades` ile bağlanır. |
+| ÖHE Yönlendirme | Liste yok; ~150 il/ilçe koordinatı uygulama içinde. Kuş uçuşu × 1,3 ÷ 75 km/sa + 15 dk hazırlık, sonuç aralık olarak. |
+| Sorumluluk Rehberi | Arama kaydı yazmadan önce 1 sn bekler (her tuşta kayıt atmaz). Vaka önerisi anahtar kelime puanlamasıyla. |
+| Kurumsal Hafıza | İki SharePoint sürümünün alanları birleştirildi. |
+| Raporlama / Rapor Stüdyosu | Grafikler uygulama içi; `.pptx` `pptxgenjs` ile cihazda üretilir ve rapor arşivine eklenir. |
+| Pusula Motoru | 3 örnek karar ağacı uygulama kodunda; duyurular `TTPortDuyurular` şemasıyla. Dış bağlantı yok. |
+| Görevler | `VIPGörevler` + `ANA LİSTE` alanları birleşik; alt adımlar JSON. |
+
+### 9.3 Canlıya geçiş: repository arkasına gelecek API
+
+`src/data/repo.ts` içindeki `DataSource` arayüzü bir `HttpSource` ile değiştirilir; ekranlar değişmez.
+Önerilen uç noktalar (SharePoint REST'in önüne konacak ince bir arka uç ya da doğrudan SharePoint REST eşlemesi):
+
+**Genel CRUD** — her tablo için (`{liste}` = tablo adı → SharePoint liste adı eşlemesi aşağıda):
+
+| Metot | Uç nokta | Repository | SharePoint karşılığı |
+|---|---|---|---|
+| GET | `/api/{liste}?filter=&orderby=&top=` | `list`, `query` | `GET _api/web/lists/getbytitle('…')/items` |
+| GET | `/api/{liste}/{id}` | `get` | `…/items({id})` |
+| POST | `/api/{liste}` | `create` | `POST …/items` |
+| PATCH | `/api/{liste}/{id}` | `update` | `MERGE …/items({id})` + `IF-MATCH` (etag ile, `*` yerine) |
+| DELETE | `/api/{liste}/{id}` | `remove` | `DELETE …/items({id})` |
+| GET | `/api/gecmis?liste=&kayitId=` | `history` | `VVIPDegisiklikGecmisi` / `VVIPTaahhutDegisiklikGecmisi` |
+
+**İş akışı uç noktaları** (sunucu tarafında yapılması gerekenler — istemciye bırakılmamalı):
+
+| Uç nokta | Amaç | Neden sunucuda |
+|---|---|---|
+| `POST /api/altyapi/{id}/sun` | Beklemede → Üst yönetim; zorunlu alan kontrolü | Durum geçişi kuralı + geçmiş kaydı atomik olmalı |
+| `POST /api/altyapi/{id}/karar` `{onay, not}` | Onay / Red | Yalnızca yönetici yetkisiyle |
+| `POST /api/altyapi/{id}/ustlen` | Takipçi atama + atama bildirimi | `VVIPAtamaBildirimLog` kilidi |
+| `POST /api/altyapi/rapor/docx` `{ids}` | Word raporu (istemcide de üretilebilir) | İsteğe bağlı |
+| `POST /api/erisim/talep` | Numara görme / tam rapor talebi | `ErisimTalepleri` |
+| `POST /api/erisim/{id}/karar` | Onay/red + `GecerlilikBitis` | Yalnızca `ErisimOnaycilar` |
+| `GET /api/ust-hat/{id}/numara` | Tam numarayı döner, `ErisimLog`'a yazar | **Numara istemciye maskesiz hiç gönderilmemeli**; prototipte maskeleme istemcide |
+| `GET /api/ust-hat/rapor?tam=1` | Tam numaralı rapor | Aktif onay kontrolü + günlük |
+| `POST /api/tetik/gunluk` | Taahhüt alarmı, gündem 1 ay+, VVIP 7 gün, gecikme | "Günün ilk açanı" yerine zamanlanmış görev (cron) önerilir |
+| `POST /api/bildirim/gonder` | Gerçek e-posta | Log listeleri = çift gönderim kilidi |
+| `POST /api/ohe/aktarim` | Excel içe aktarım (upsert + sıfırlama) | `OHE_EnvanterSyncLog`; toplu işlem tek işlemde |
+| `POST /api/ohe/cihaz/{id}/karar` | Malzeme kaydı onayı | Yönetici yetkisi |
+| `POST /api/rehber/arama-kaydi` | Arama kaydı | `RehberAramaKaydi` |
+| `GET /api/me` | Kullanıcı, rol, yönetici bayrağı | Demo rol seçicinin yerine; `VIPTeamMembers.IsManager` + SP grupları |
+
+**Tablo → SharePoint listesi eşlemesi:** `altyapi`→VVIP Altyapi Takip · `altyapi_ek`→VVIPAltyapiEkler · `gecmis`→VVIPDegisiklikGecmisi + VVIPTaahhutDegisiklikGecmisi · `taahhut`→BakanHatlari · `taahhut_bildirim`→TaahhutBildirimLog + VVIPTaahhutAlarmLog · `ust_hat`→UstYonetimHatlari · `erisim_talep`→ErisimTalepleri · `erisim_onayci`→ErisimOnaycilar · `erisim_log`→ErisimLog · `vip_talep`→(ana VIP talep listesi — şeması alınmalı) · `vip_meta`→VIPTakipMeta · `vip_log`→VIPTakipLog · `ohe_cihaz`→OHE_Envanter (Cihaz Stok) · `ohe_stok`→OHE_EnvanterStok · `ohe_sync_log`→OHE_EnvanterSyncLog · `ohe_gundem`→OHE_Gundemler · `ohe_gundem_log`→OHE_GundemBildirimLog · `ohe_sat`→OHE_SAT_Kayitlari (Harcamalar) · `ohe_test_hat`→OHE_TestHatlari · `ohe_butce`→OHE_Butce_Tanimlari · `ohe_harcama`→OHE_Butce_Harcamalar · `kades`→OHE_KadesDefteri · `rehber`→SorumlulukRehberi · `rehber_arama`→RehberAramaKaydi · `hafiza`→KurumsalHafiza · `rapor`→MonitoringRaporlari · `pusula`→PusulaBilgi · `duyuru`→TTPortDuyurular · `gorev`→VIPGörevler · `gorev_log`→VIPAktiviteLog · `ekip`→VIPTeamMembers · `bildirim`, `bildirim_kilit`→(prototip; canlıda log listeleri).
+
+**Şemaya eklenmesi gereken alanlar (prototip ekleri):** `VVIP Altyapi Takip`: `Ilce`, `Kaynak`, `ToptanaBildirildi` · `OHE_Envanter (Cihaz Stok)`: `OnayDurumu`.
